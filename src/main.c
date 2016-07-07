@@ -88,26 +88,26 @@
 #define PRIMARY_CORE	2
 #define WORKER_CORE	3
 
-uint64_t tsc_hz;
+uint64_t prf_tsc_hz;
 struct lcore_conf lcore_conf[RTE_MAX_LCORE] __rte_cache_aligned;
-int mastercore_id;
-int primarycore_id;
-int nb_fwd_cores;
-int nb_worker_cores;
+int prf_mastercore_id;
+int prf_primarycore_id;
+int prf_nb_fwd_cores;
+int prf_nb_worker_cores;
 
-struct rte_mempool *pktmbuf_pool;
-struct rte_mempool *tcp_ent_pool;
-struct rte_mempool *src_track_pool;
+struct rte_mempool *prf_pktmbuf_pool;
+struct rte_mempool *prf_tcp_ent_pool;
+struct rte_mempool *prf_src_track_pool;
 
-struct  ether_addr dst_mac[MAX_PORTS] __rte_cache_aligned;
-struct  ether_addr src_mac[MAX_PORTS] __rte_cache_aligned;
+struct  ether_addr dst_mac[PRF_MAX_PORTS] __rte_cache_aligned;
+struct  ether_addr src_mac[PRF_MAX_PORTS] __rte_cache_aligned;
 
 #define RSS_BYTE0 0x6d
 #define RSS_BYTE1 0x5a
 #define RSS_BYTE2 0x15
 #define RSS_BYTE3 0x3e
 
-int8_t dst_ports[MAX_PORTS];
+int8_t prf_dst_ports[PRF_MAX_PORTS];
 struct rte_eth_rss_reta reta_conf;
 uint8_t my_rss_key[40];
 
@@ -235,7 +235,7 @@ send_burst(struct lcore_conf *conf, unsigned n, uint8_t port)
 }
 
 void
-send_packet(struct rte_mbuf *m, struct lcore_conf *conf, uint8_t port)
+prf_send_packet(struct rte_mbuf *m, struct lcore_conf *conf, uint8_t port)
 {
 	unsigned len;
 
@@ -244,8 +244,8 @@ send_packet(struct rte_mbuf *m, struct lcore_conf *conf, uint8_t port)
 	len = conf->len[port];
 	conf->tx_mbufs[port].m_table[len] = m;
 	len++;
-	if (unlikely(len == MAX_PKT_BURST)) {
-		send_burst(conf, MAX_PKT_BURST, port);
+	if (unlikely(len == PRF_MAX_PKT_BURST)) {
+		send_burst(conf, PRF_MAX_PKT_BURST, port);
 		len = 0;
 	}
 	len = conf->len[port] = len;
@@ -375,13 +375,13 @@ tcp_sanity_check(struct rte_mbuf **pkt_in, struct rte_mbuf **pkt_out,
 static int
 primary_main_loop(void)
 {
-	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
+	struct rte_mbuf *pkts_burst[PRF_MAX_PKT_BURST];
 	struct rte_mbuf *m;
 	uint64_t diff_tsc, cur_tsc, prev_tsc;
 	uint64_t prev_poll_tsc, diff_poll_tsc;
 	int j, lcore_id, port_id, nb_rx;
 	struct lcore_conf *conf;
-	const uint64_t drain_tsc = (tsc_hz + US_PER_S - 1) / US_PER_S * BURST_TX_DRAIN_US;
+	const uint64_t drain_tsc = (prf_tsc_hz + US_PER_S - 1) / US_PER_S * BURST_TX_DRAIN_US;
 
 	lcore_id = rte_lcore_id();
 	conf = &lcore_conf[lcore_id];
@@ -393,7 +393,7 @@ primary_main_loop(void)
 
 		diff_tsc = cur_tsc - prev_tsc;
 		if (unlikely(diff_tsc > drain_tsc)) {
-			for (port_id = 0; port_id < MAX_PORTS; port_id++) {
+			for (port_id = 0; port_id < PRF_MAX_PORTS; port_id++) {
 				if (conf->len[port_id] == 0)
 					continue;
 				send_burst(conf, conf->len[port_id], (uint8_t) port_id);
@@ -405,13 +405,13 @@ primary_main_loop(void)
 		if (unlikely(diff_poll_tsc < poll_tsc)) {
 			continue;
 		}
-		for (port_id = 0; port_id < MAX_PORTS; port_id++) {
+		for (port_id = 0; port_id < PRF_MAX_PORTS; port_id++) {
 			nb_rx = rte_eth_rx_burst((uint8_t) port_id, conf->queue_id,
-						pkts_burst, MAX_PKT_BURST);
+						pkts_burst, PRF_MAX_PKT_BURST);
 			conf->stats.rx_pkts += nb_rx;
 			for (j = 0; j < nb_rx; j++) {
 				m = pkts_burst[j];
-				send_packet(m, conf, dst_ports[port_id]);
+				prf_send_packet(m, conf, prf_dst_ports[port_id]);
 			}
 		}
 		prev_poll_tsc = cur_tsc;
@@ -422,11 +422,11 @@ primary_main_loop(void)
 static int
 worker_main_loop(void)
 {
-	struct rte_mbuf *pkts_burst[MAX_PKT_BURST], *tcp_seg_arr[MAX_PKT_BURST];
-	const uint8_t *acl_p[MAX_PKT_BURST];
-	uint32_t result[MAX_PKT_BURST];
-	const uint64_t drain_tsc = (tsc_hz + US_PER_S - 1) / US_PER_S * BURST_TX_DRAIN_US;
-	const uint64_t gc_int_tsc = (tsc_hz + US_PER_S - 1) / US_PER_S * GC_INTERVAL;
+	struct rte_mbuf *pkts_burst[PRF_MAX_PKT_BURST], *tcp_seg_arr[PRF_MAX_PKT_BURST];
+	const uint8_t *acl_p[PRF_MAX_PKT_BURST];
+	uint32_t result[PRF_MAX_PKT_BURST];
+	const uint64_t drain_tsc = (prf_tsc_hz + US_PER_S - 1) / US_PER_S * BURST_TX_DRAIN_US;
+	const uint64_t gc_int_tsc = (prf_tsc_hz + US_PER_S - 1) / US_PER_S * GC_INTERVAL;
 	uint64_t diff_drain_tsc, diff_gc_tsc, cur_tsc, prev_drain_tsc, prev_gc_tsc;
 	uint64_t prev_poll_tsc, diff_poll_tsc;
 	int  cb, j, lcore_id, port_id, nb_rx;
@@ -448,7 +448,7 @@ worker_main_loop(void)
 
 		diff_drain_tsc = cur_tsc - prev_drain_tsc;
 		if (unlikely(diff_drain_tsc > drain_tsc)) {
-			for (port_id = 0; port_id < MAX_PORTS; port_id++) {
+			for (port_id = 0; port_id < PRF_MAX_PORTS; port_id++) {
 				if (conf->len[port_id] == 0)
 					continue;
 				send_burst(conf, conf->len[port_id], (uint8_t) port_id);
@@ -460,9 +460,9 @@ worker_main_loop(void)
 		if (unlikely(diff_poll_tsc < poll_tsc)) {
 			continue;
 		}
-		for (port_id = 0; port_id < MAX_PORTS; port_id++) {
+		for (port_id = 0; port_id < PRF_MAX_PORTS; port_id++) {
 			nb_rx = rte_eth_rx_burst((uint8_t) port_id, conf->queue_id,
-					pkts_burst, MAX_PKT_BURST);
+					pkts_burst, PRF_MAX_PKT_BURST);
 			if (unlikely(nb_rx == 0))
 				continue;
 			conf->stats.rx_pkts += nb_rx;
@@ -515,13 +515,13 @@ main_loop_launcher(__attribute__((unused)) void *dummy)
 }
 
 static void
-init_nic(int nb_fwd_cores) {
+init_nic(int prf_nb_fwd_cores) {
 	int i, j, ret, nb_ports, portid;
 	struct rte_eth_link link;
 	struct rte_5tuple_filter filter;
 
 	nb_ports = rte_eth_dev_count();
-	if (nb_ports != MAX_PORTS)
+	if (nb_ports != PRF_MAX_PORTS)
 		rte_exit(EXIT_FAILURE, "Invalid ethernet ports count - bye\n");
 
 	/*init RSS*/
@@ -543,7 +543,7 @@ init_nic(int nb_fwd_cores) {
 	}
 	/*init RETA table*/
 	for (i = 0, j = 1; i < 128; i++, j++) {
-		if (j == nb_fwd_cores)
+		if (j == prf_nb_fwd_cores)
 			j = 1;
 		reta_conf.reta[i] = j;
 	}
@@ -551,17 +551,17 @@ init_nic(int nb_fwd_cores) {
 	reta_conf.mask_hi = 0xffffffffffffffff;
 
 	for (portid = 0; portid < nb_ports; portid++) {
-		ret = rte_eth_dev_configure(portid, nb_fwd_cores, nb_fwd_cores, &port_conf);
+		ret = rte_eth_dev_configure(portid, prf_nb_fwd_cores, prf_nb_fwd_cores, &port_conf);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "Cannot configure device: err=%d, port=%d\n", ret, portid);
 
 		rte_eth_macaddr_get(portid, &src_mac[portid]);
 
-		for (i = 0; i < nb_fwd_cores; i++) {
-			ret = rte_eth_rx_queue_setup(portid, i, NB_RXD, SOCKET0, &rx_conf, pktmbuf_pool);
+		for (i = 0; i < prf_nb_fwd_cores; i++) {
+			ret = rte_eth_rx_queue_setup(portid, i, NB_RXD, PRF_SOCKET0, &rx_conf, prf_pktmbuf_pool);
 				if (ret < 0)
 					rte_exit(EXIT_FAILURE, "rte_eth_rx_queue_setup: err=%d\n", ret);
-			ret = rte_eth_tx_queue_setup(portid, i, NB_TXD, SOCKET0, &tx_conf);
+			ret = rte_eth_tx_queue_setup(portid, i, NB_TXD, PRF_SOCKET0, &tx_conf);
 				if (ret < 0)
 					rte_exit(EXIT_FAILURE, "rte_eth_tx_queue_setup: err=%d\n", ret);
 		}
@@ -632,51 +632,51 @@ MAIN(int argc, char **argv)
 
 	/*init in lcore_conf core roles*/
 	memset(lcore_conf, 0, sizeof(struct lcore_conf)*RTE_MAX_LCORE);
-	mastercore_id = rte_get_master_lcore();
-	lcore_conf[mastercore_id].core_role = MASTER_CORE;
-	primarycore_id = rte_get_next_lcore(mastercore_id, 1, 1);
-	lcore_conf[primarycore_id].core_role = PRIMARY_CORE;
-	lcore_conf[primarycore_id].queue_id = 0;
+	prf_mastercore_id = rte_get_master_lcore();
+	lcore_conf[prf_mastercore_id].core_role = MASTER_CORE;
+	prf_primarycore_id = rte_get_next_lcore(prf_mastercore_id, 1, 1);
+	lcore_conf[prf_primarycore_id].core_role = PRIMARY_CORE;
+	lcore_conf[prf_primarycore_id].queue_id = 0;
 	j = 0;
-	nb_worker_cores = 0;
+	prf_nb_worker_cores = 0;
 	RTE_LCORE_FOREACH_SLAVE(i) {
-		if (i == primarycore_id)
+		if (i == prf_primarycore_id)
 			continue;
 		lcore_conf[i].core_role = WORKER_CORE;
 		lcore_conf[i].queue_id = ++j;
-		nb_worker_cores++;
+		prf_nb_worker_cores++;
 	}
 
-	if (nb_worker_cores == 0)
+	if (prf_nb_worker_cores == 0)
 		rte_exit(EXIT_FAILURE, "No worker lcores - bye\n");
-	nb_fwd_cores = nb_worker_cores + 1;
+	prf_nb_fwd_cores = prf_nb_worker_cores + 1;
 
 	/* Init memory */
-	pktmbuf_pool = rte_mempool_create("mbuf_pool", NB_MBUF, MBUF_SIZE,
-					MEMPOOL_CACHE_SIZE,
+	prf_pktmbuf_pool = rte_mempool_create("mbuf_pool", NB_MBUF, MBUF_SIZE,
+					PRF_MEMPOOL_CACHE_SIZE,
 					sizeof(struct rte_pktmbuf_pool_private),
 					rte_pktmbuf_pool_init, NULL,
 					rte_pktmbuf_init, NULL,
-					SOCKET0, 0);
-	if (pktmbuf_pool == NULL)
+					PRF_SOCKET0, 0);
+	if (prf_pktmbuf_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init mbuf pool\n");
 
-	tcp_ent_pool = rte_mempool_create("tcp_ent_pool", NB_TCP_ENT,
+	prf_tcp_ent_pool = rte_mempool_create("prf_tcp_ent_pool", NB_TCP_ENT,
 					sizeof(struct tcp_ent), 32,
-					0, NULL, NULL, NULL, NULL, SOCKET0, 0);
+					0, NULL, NULL, NULL, NULL, PRF_SOCKET0, 0);
 
-	if (tcp_ent_pool == NULL)
+	if (prf_tcp_ent_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init tcp_ent pool\n");
 
-	src_track_pool = rte_mempool_create("src_track_pool", NB_SRC_TRACK_ENT,
+	prf_src_track_pool = rte_mempool_create("prf_src_track_pool", NB_SRC_TRACK_ENT,
 					sizeof(struct src_track_ent), 32,
-					0, NULL, NULL, NULL, NULL, SOCKET0, 0);
+					0, NULL, NULL, NULL, NULL, PRF_SOCKET0, 0);
 
-	if (src_track_pool == NULL)
+	if (prf_src_track_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init src_track pool\n");
 
 	RTE_LCORE_FOREACH_SLAVE(i) {
-		if (i == primarycore_id)
+		if (i == prf_primarycore_id)
 			continue;
 		lcore_conf[i].tcp_hash = ipv4_tcp_hash_init(i);
 		if (lcore_conf[i].tcp_hash == NULL)
@@ -684,26 +684,26 @@ MAIN(int argc, char **argv)
 		printf("Init TCP_Hash on core %d\n", i);
 	}
 
-	init_nic(nb_fwd_cores);
+	init_nic(prf_nb_fwd_cores);
 
-	dst_ports[0] = 1;
-	dst_ports[1] = 0;
+	prf_dst_ports[0] = 1;
+	prf_dst_ports[1] = 0;
 	syn_proxy_secret[0] = (uint32_t)rte_rand();
 	syn_proxy_secret[1] = (uint32_t)rte_rand();
-	tsc_hz = rte_get_tsc_hz();
+	prf_tsc_hz = rte_get_tsc_hz();
 	embrionic_threshold = 2000;
 
-	poll_tsc = (tsc_hz + US_PER_S - 1) / (US_PER_S * nb_worker_cores) * RX_POLL_US;
+	poll_tsc = (prf_tsc_hz + US_PER_S - 1) / (US_PER_S * prf_nb_worker_cores) * RX_POLL_US;
 	printf("Poll TSC %"PRIu64"\n", poll_tsc);
 
 	/*init timer table*/
-	tcp_timer_table[TCP_STATE_SYN_SENT]	= tsc_hz * 20;
-	tcp_timer_table[TCP_STATE_SYN_RCV]	= tsc_hz * 20;
-	tcp_timer_table[TCP_STATE_ESTABL]	= tsc_hz * 1800;
-	tcp_timer_table[TCP_STATE_FIN_WAIT]	= tsc_hz * 120;
-	tcp_timer_table[TCP_STATE_CLOSE_WAIT]	= tsc_hz * 120;
-	tcp_timer_table[TCP_STATE_LAST_ACK]	= tsc_hz * 120;
-	tcp_timer_table[TCP_STATE_TIME_WAIT]	= tsc_hz * 120;
+	tcp_timer_table[TCP_STATE_SYN_SENT]	= prf_tsc_hz * 20;
+	tcp_timer_table[TCP_STATE_SYN_RCV]	= prf_tsc_hz * 20;
+	tcp_timer_table[TCP_STATE_ESTABL]	= prf_tsc_hz * 1800;
+	tcp_timer_table[TCP_STATE_FIN_WAIT]	= prf_tsc_hz * 120;
+	tcp_timer_table[TCP_STATE_CLOSE_WAIT]	= prf_tsc_hz * 120;
+	tcp_timer_table[TCP_STATE_LAST_ACK]	= prf_tsc_hz * 120;
+	tcp_timer_table[TCP_STATE_TIME_WAIT]	= prf_tsc_hz * 120;
 
 	init_acl_config();
 	/*init fake acl context*/

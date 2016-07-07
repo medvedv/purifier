@@ -54,7 +54,7 @@ compress_opt(struct tcpopts *options)
 	uint8_t data;
 	uint16_t mss = options->mss;
 
-	for (data = ARRAY_SIZE(msstab) - 1; data ; data--)
+	for (data = PRF_ARRAY_SIZE(msstab) - 1; data ; data--)
 		if (mss >= msstab[data])
 			break;
 	data += (options->wscale<<2);
@@ -113,7 +113,7 @@ synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th,
 	if (data < 0)
 		return 1;
 	if (data < (1<<7)) {
-		options->mss =  msstab[data & (ARRAY_SIZE(msstab) - 1)];
+		options->mss =  msstab[data & (PRF_ARRAY_SIZE(msstab) - 1)];
 		options->wscale = (data>>2) & 0xf;
 		options->sackok = data>>6 & 0x1;
 		return 0;
@@ -127,7 +127,7 @@ struct src_track_hash *
 src_track_hash_init(unsigned lcore_id, int idx)
 {
 	struct src_track_hash *hash = NULL;
-	char buf[TCP_HASH_NAMESIZE];
+	char buf[PRF_TCP_HASH_NAMESIZE];
 
 	snprintf(buf, sizeof(buf), "src_track_hash_%u_%u", lcore_id, idx);
 	hash = (struct src_track_hash *)rte_zmalloc_socket(buf, sizeof(struct src_track_hash), CACHE_LINE_SIZE, 0);
@@ -152,7 +152,7 @@ src_track_node_add(struct src_track_hash *hash_table,
 		}
 	}
 
-	ret = rte_mempool_mc_get(src_track_pool, (void *)&ent);
+	ret = rte_mempool_mc_get(prf_src_track_pool, (void *)&ent);
 	if (ret != 0)
 		return -ENOENT;
 
@@ -201,7 +201,7 @@ src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
 		tmp = *head;
 		*head = (*head)->next;
 		memset(tmp, 0, sizeof(struct src_track_node));
-		rte_mempool_mp_put(src_track_pool, tmp);
+		rte_mempool_mp_put(prf_src_track_pool, tmp);
 		return 0;
 	}
 
@@ -211,7 +211,7 @@ src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
 			tmp = cur->next;
 			cur->next = tmp->next;
 			memset(tmp, 0, sizeof(struct src_track_node));
-			rte_mempool_mp_put(src_track_pool, tmp);
+			rte_mempool_mp_put(prf_src_track_pool, tmp);
 			return 0;
 		}
 		cur = cur->next;
@@ -326,7 +326,7 @@ struct ipset_hash *
 ipset_hash_init(unsigned lcore_id, int idx)
 {
 	struct ipset_hash *hash = NULL;
-	char buf[TCP_HASH_NAMESIZE];
+	char buf[PRF_TCP_HASH_NAMESIZE];
 
 	snprintf(buf, sizeof(buf), "ipset_hash_%u_%u", lcore_id, idx);
 	hash = (struct ipset_hash *)rte_zmalloc_socket(buf, sizeof(struct ipset_hash), CACHE_LINE_SIZE, 0);

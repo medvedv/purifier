@@ -31,8 +31,8 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MAIN_H_
-#define _MAIN_H_
+#ifndef _PRF_MAIN_H_
+#define _PRF_MAIN_H_
 
 #ifdef RTE_EXEC_ENV_BAREMETAL
 #define MAIN _main
@@ -42,15 +42,15 @@
 
 int MAIN(int argc, char **argv);
 
-#define ARRAY_SIZE(x)		(sizeof(x)/sizeof(x[0]))
-#define TCP_HASH_NAMESIZE	32
-#define MAX_PKT_BURST		32
-#define MAX_PORTS		2
-#define MEMPOOL_CACHE_SIZE	256
-#define SEC_CTX_MAX_RULES	8
-#define SOCKET0			0
+#define PRF_ARRAY_SIZE(x)		(sizeof(x)/sizeof(x[0]))
+#define PRF_TCP_HASH_NAMESIZE	32
+#define PRF_MAX_PKT_BURST		32
+#define PRF_MAX_PORTS		2
+#define PRF_MEMPOOL_CACHE_SIZE	256
+#define PRF_SEC_CTX_MAX_RULES	8
+#define PRF_SOCKET0			0
 
-struct lcore_stats {
+struct prf_lcore_stats {
 	uint64_t rx_pkts;
 	uint64_t tx_pkts;
 	uint64_t malformed;
@@ -75,10 +75,10 @@ struct lcore_stats {
 	uint64_t acl_stat[ACL_MAX_RULES];
 } __rte_cache_aligned;
 
-extern int8_t dst_ports[MAX_PORTS];
+extern int8_t prf_dst_ports[PRF_MAX_PORTS];
 
-struct mbuf_table {
-	struct rte_mbuf *m_table[MAX_PKT_BURST];
+struct prf_mbuf_table {
+	struct rte_mbuf *m_table[PRF_MAX_PKT_BURST];
 };
 
 struct lcore_conf {
@@ -87,23 +87,23 @@ struct lcore_conf {
 	uint32_t		bucket_pair_nb;
 	uint8_t			queue_id;
 	uint8_t			core_role;
-	unsigned		len[MAX_PORTS];
-	struct mbuf_table	tx_mbufs[MAX_PORTS] __rte_cache_aligned;
-	struct sec_ctx_rule	rules[SEC_CTX_MAX_RULES] __rte_cache_aligned;
-	struct lcore_stats	stats __rte_cache_aligned;
+	unsigned		len[PRF_MAX_PORTS];
+	struct prf_mbuf_table	tx_mbufs[PRF_MAX_PORTS] __rte_cache_aligned;
+	struct sec_ctx_rule	rules[PRF_SEC_CTX_MAX_RULES] __rte_cache_aligned;
+	struct prf_lcore_stats	stats __rte_cache_aligned;
 } __rte_cache_aligned;
 
-extern uint64_t tsc_hz;
+extern uint64_t prf_tsc_hz;
 extern struct lcore_conf lcore_conf[RTE_MAX_LCORE] __rte_cache_aligned;
-extern int mastercore_id;
-extern int primarycore_id;
-extern int nb_fwd_cores;
-extern int nb_worker_cores;
+extern int prf_mastercore_id;
+extern int prf_primarycore_id;
+extern int prf_nb_fwd_cores;
+extern int prf_nb_worker_cores;
 
-extern struct rte_mempool *pktmbuf_pool;
-extern struct rte_mempool *tcp_ent_pool;
-extern struct rte_mempool *src_track_pool;
+extern struct rte_mempool *prf_pktmbuf_pool;
+extern struct rte_mempool *prf_tcp_ent_pool;
+extern struct rte_mempool *prf_src_track_pool;
 
-void send_packet(struct rte_mbuf *m, struct lcore_conf *conf, uint8_t port);
+void prf_send_packet(struct rte_mbuf *m, struct lcore_conf *conf, uint8_t port);
 
-#endif /* _MAIN_H_ */
+#endif /* _PRF_MAIN_H_ */

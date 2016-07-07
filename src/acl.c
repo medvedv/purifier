@@ -130,7 +130,7 @@ acl_accept(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_
 
 	/* Maybe remove (tcplen != 0) in case retransmit syn to backend*/
 	if (unlikely((tcpflags != TCPHDR_SYN) || (tcplen != 0))) {
-		if ((tcpflags != TCPHDR_ACK) || (tcplen != 0) || (synproxy_cookie_check(ip_hdr, tcp_hdr, time / (tsc_hz * 60), &tcpopts))) {
+		if ((tcpflags != TCPHDR_ACK) || (tcplen != 0) || (synproxy_cookie_check(ip_hdr, tcp_hdr, time / (prf_tsc_hz * 60), &tcpopts))) {
 			++conf->stats.state_mismatch;
 			rte_pktmbuf_free(m);
 			return;
@@ -146,7 +146,7 @@ acl_accept(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_
 		oldeth_hdr	= eth_hdr;
 		oldip_hdr	= ip_hdr;
 		oldtcp_hdr	= tcp_hdr;
-		m = rte_pktmbuf_alloc(pktmbuf_pool);
+		m = rte_pktmbuf_alloc(prf_pktmbuf_pool);
 		if (m == NULL) {
 			rte_pktmbuf_free(oldmbuf);
 		return;
@@ -228,12 +228,12 @@ acl_accept(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_
 		if (tcpopts.mss) {
 			data = compress_opt(&tcpopts);
 			tcp_hdr->sent_seq = rte_cpu_to_be_32(synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
-						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (tsc_hz * 60), data));
+						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (prf_tsc_hz * 60), data));
 		} else {
 			tcpopts.mss = DEFAULT_MSS;
 			data = compress_opt(&tcpopts);
 			tcp_hdr->sent_seq = rte_cpu_to_be_32(synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
-						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (tsc_hz * 60), data));
+						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (prf_tsc_hz * 60), data));
 			tcpopts.mss = 0;
 		}
 
@@ -248,7 +248,7 @@ acl_accept(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_
 		m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 
 		++conf->stats.cookies_sent;
-		send_packet(m, conf, m->pkt.in_port);
+		prf_send_packet(m, conf, m->pkt.in_port);
 		return;
 	}
 add_state:
@@ -281,7 +281,7 @@ add_state:
 	*timer = time + tcp_timer_table[TCP_STATE_SYN_SENT];
 	tcp_conn->state = TCP_STATE_SYN_SENT;
 	tcp_conn->src_track_node = NULL;
-	send_packet(m, conf, dst_ports[m->pkt.in_port]);
+	prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
 }
 
 void
@@ -296,7 +296,7 @@ void
 acl_no_track(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, __attribute__((unused)) uint64_t time)
 {
 	++conf->stats.acl_stat[(result >> ACL_RESULT_RULE_SHIFT) & ACL_RESULT_RULE_MASK];
-	send_packet(m, conf, dst_ports[m->pkt.in_port]);
+	prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
 }
 
 void
@@ -320,7 +320,7 @@ acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64
 
 	++conf->stats.acl_stat[(result >> ACL_RESULT_RULE_SHIFT) & ACL_RESULT_RULE_MASK];
 	index = (result >> ACL_SEC_CTX_RESULT_SHIFT) & ACL_SEC_CTX_RESULT_MASK;
-	if (unlikely(index >= SEC_CTX_MAX_RULES)) {
+	if (unlikely(index >= PRF_SEC_CTX_MAX_RULES)) {
 		rte_pktmbuf_free(m);
 		return;
 	}
@@ -337,7 +337,7 @@ acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64
 	win = rte_be_to_cpu_16(tcp_hdr->rx_win);
 
 	if (unlikely((tcpflags != TCPHDR_SYN) || (tcplen != 0))) {
-		if ((tcpflags != TCPHDR_ACK) || (tcplen != 0) || (synproxy_cookie_check(ip_hdr, tcp_hdr, time / (tsc_hz * 60), &tcpopts))) {
+		if ((tcpflags != TCPHDR_ACK) || (tcplen != 0) || (synproxy_cookie_check(ip_hdr, tcp_hdr, time / (prf_tsc_hz * 60), &tcpopts))) {
 			++conf->stats.state_mismatch;
 			rte_pktmbuf_free(m);
 			return;
@@ -362,7 +362,7 @@ acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64
 		oldeth_hdr	= eth_hdr;
 		oldip_hdr	= ip_hdr;
 		oldtcp_hdr	= tcp_hdr;
-		m = rte_pktmbuf_alloc(pktmbuf_pool);
+		m = rte_pktmbuf_alloc(prf_pktmbuf_pool);
 		if (m == NULL) {
 			rte_pktmbuf_free(oldmbuf);
 			return;
@@ -467,12 +467,12 @@ acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64
 		if (tcpopts.mss) {
 			data = compress_opt(&tcpopts);
 			tcp_hdr->sent_seq = rte_cpu_to_be_32(synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
-						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (tsc_hz * 60), data));
+						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (prf_tsc_hz * 60), data));
 		} else {
 			tcpopts.mss = DEFAULT_MSS;
 			data = compress_opt(&tcpopts);
 			tcp_hdr->sent_seq = rte_cpu_to_be_32(synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
-						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (tsc_hz * 60), data));
+						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (prf_tsc_hz * 60), data));
 			tcpopts.mss = 0;
 		}
 
@@ -501,7 +501,7 @@ acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64
 		m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 
 		++conf->stats.cookies_sent;
-		send_packet(m, conf, m->pkt.in_port);
+		prf_send_packet(m, conf, m->pkt.in_port);
 		return;
 	}
 add_state:
@@ -550,13 +550,13 @@ add_state:
 	*timer = time + tcp_timer_table[TCP_STATE_SYN_SENT];
 	tcp_conn->state = TCP_STATE_SYN_SENT;
 	tcp_conn->src_track_node = node;
-	send_packet(m, conf, dst_ports[m->pkt.in_port]);
+	prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
 }
 
 void
 init_acl_config(void)
 {
-	acl_param.socket_id		= SOCKET0;
+	acl_param.socket_id		= PRF_SOCKET0;
 	acl_param.rule_size		= RTE_ACL_RULE_SZ(RTE_DIM(ipv4_defs));
 	acl_param.max_rule_num		= ACL_MAX_RULES;
 	acl_build_param.num_categories	= DEFAULT_MAX_CATEGORIES;

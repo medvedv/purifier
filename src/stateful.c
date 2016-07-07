@@ -103,7 +103,7 @@ process_tcp_seg(struct lcore_conf *conf, struct rte_mbuf *m,
 		++conf->stats.embrionic_counter;
 		tcp_conn->state = TCP_STATE_SYN_SENT;
 		memset(&tcp_conn->dir[!dir], 0, sizeof(struct tcp_conn_state));
-		send_packet(m, conf, dst_ports[m->pkt.in_port]);
+		prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
 		return;
 	}
 
@@ -156,7 +156,7 @@ process_tcp_seg(struct lcore_conf *conf, struct rte_mbuf *m,
 			--conf->stats.embrionic_counter;
 		tcp_conn->state = TCP_STATE_TIME_WAIT;
 		*timer = time + tcp_timer_table[TCP_STATE_TIME_WAIT];
-		send_packet(m, conf, dst_ports[m->pkt.in_port]);
+		prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
 		return;
 	}
 
@@ -298,7 +298,7 @@ process_tcp_seg(struct lcore_conf *conf, struct rte_mbuf *m,
 			tcp_hdr->cksum          = prf_get_ipv4_psd_sum(ip_hdr);
 			m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 		}
-		send_packet(m, conf, dst_ports[m->pkt.in_port]);
+		prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
 		return;
 	}
 	++conf->stats.bad_seq_ack;
@@ -309,7 +309,7 @@ struct ipv4_tcp_hash *
 ipv4_tcp_hash_init(unsigned lcore_id)
 {
 	struct ipv4_tcp_hash *hash = NULL;
-	char buf[TCP_HASH_NAMESIZE];
+	char buf[PRF_TCP_HASH_NAMESIZE];
 
 	if (!hash_initval)
 		hash_initval = (uint32_t)rte_rand();
@@ -351,7 +351,7 @@ ipv4_tcp_conn_add(struct lcore_conf *conf, uint32_t sip, uint32_t dip,
 			return 0;
 		}
 	}
-	ret = rte_mempool_mc_get(tcp_ent_pool, (void *)&ent);
+	ret = rte_mempool_mc_get(prf_tcp_ent_pool, (void *)&ent);
 	if (ret != 0) {
 		return -ENOENT;
 	}
@@ -417,11 +417,11 @@ ipv4_tcp_conn_lookup_burst(struct lcore_conf *conf, struct rte_mbuf **mb_arr,
 		struct rte_mbuf **mb_new, int nb_pkt, uint64_t time)
 {
 	int i, j, k = 0, l = 0;
-	uint32_t bucket[MAX_PKT_BURST];
+	uint32_t bucket[PRF_MAX_PKT_BURST];
 	struct tcp_ent *cur;
 	struct ipv4_hdr *ip_hdr;
 	struct tcp_hdr *tcp_hdr;
-	struct tcp_lookup tcp_lookup[MAX_PKT_BURST];
+	struct tcp_lookup tcp_lookup[PRF_MAX_PKT_BURST];
 	struct ipv4_tcp_hash *hash_table = conf->tcp_hash;
 
 	for (i = 0; i < nb_pkt; i++) {
@@ -696,7 +696,7 @@ ipv4_tcp_garbage_collect(struct lcore_conf *conf, uint64_t time)
 				tmp = (*head);
 				(*head) = (*head)->next;
 				memset(tmp, 0, sizeof(struct tcp_ent));
-				rte_mempool_mp_put(tcp_ent_pool, tmp);
+				rte_mempool_mp_put(prf_tcp_ent_pool, tmp);
 				continue;
 			}
 			head = &(*head)->next;

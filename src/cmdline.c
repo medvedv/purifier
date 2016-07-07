@@ -228,7 +228,7 @@ init_acl:
 	rte_mb();
 
 	RTE_LCORE_FOREACH_SLAVE(i) {
-		if (i == primarycore_id)
+		if (i == prf_primarycore_id)
 			continue;
 		gc_arr[i] = lcore_conf[i].bucket_pair_nb;
 	}
@@ -236,7 +236,7 @@ init_acl:
 	rte_mb();
 	while (i != 0) {
 		i = 0;
-		if ((i == mastercore_id) || (i == primarycore_id))
+		if ((i == prf_mastercore_id) || (i == prf_primarycore_id))
 			continue;
 		if (gc_arr[i] == lcore_conf[i].bucket_pair_nb)
 			i += 1;
@@ -254,7 +254,7 @@ dump_states(struct cmdline *cl)
 	char tcp_state[TCP_STATE_NAME_MAX];
 
 	RTE_LCORE_FOREACH_SLAVE(i) {
-		if (i == primarycore_id)
+		if (i == prf_primarycore_id)
 			continue;
 		for (j = 0; j < TCP_CONN_HASH_SIZE; j++) {
 			for (k = 0; k < KEYS_PER_BUCKET; k++) {
@@ -295,7 +295,7 @@ dump_states(struct cmdline *cl)
 					snprintf(tcp_state, sizeof(tcp_state), "ERROR");
 					break;
 				}
-				ttl_time = (timer - lcore_conf[i].timer) / tsc_hz;
+				ttl_time = (timer - lcore_conf[i].timer) / prf_tsc_hz;
 				cmdline_printf(cl,	"%d pkts %d bytes"
 							"[%s]"
 							" Src ip " NIPQUAD_FMT
@@ -446,7 +446,7 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 	if (strcmp(res->target, "sec_ctx") == 0) {
 		SLIST_FOREACH(ent, &global_sec_ctx_list, next) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				if (i == primarycore_id)
+				if (i == prf_primarycore_id)
 					continue;
 				break;
 			}
@@ -470,17 +470,17 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 				cmdline_printf(cl,
 						"\t Src track rate %"PRIu64" pre second\t\n"
 						"\t Src track bucket size %"PRIu64"\t\n",
-						tsc_hz / rule->period, rule->bucket_size);
+						prf_tsc_hz / rule->period, rule->bucket_size);
 			}
 			if (rule->flags & WHITE_LIST_CHECK) {
 				cmdline_printf(cl,
 						"\t White list on\t\n"
-						"\t White list timer %"PRIu64"\t\n", rule->white_list->ban_timer / tsc_hz);
+						"\t White list timer %"PRIu64"\t\n", rule->white_list->ban_timer / prf_tsc_hz);
 			}
 			if (rule->flags & BLACK_LIST_CHECK) {
 				cmdline_printf(cl,
 						"\t Black list on\t\n"
-						"\t Black list ban time %"PRIu64"\t\n", rule->black_list->ban_timer / tsc_hz);
+						"\t Black list ban time %"PRIu64"\t\n", rule->black_list->ban_timer / prf_tsc_hz);
 				if (rule->flags & SRC_TRACK_BAN) {
 						cmdline_printf(cl,
 						"\t Src track overload ban\t\n");
@@ -537,13 +537,13 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 		cmdline_printf(cl,	"\t embrionic_counter %"PRIu64"\t\n", counter);
 	} else if (strcmp(res->target, "timers") == 0) {
 		cmdline_printf(cl, "TCP Timers:\t\n");
-		cmdline_printf(cl, "\t Syn sent : %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_SENT] / tsc_hz);
-		cmdline_printf(cl, "\t Syn rcv : %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_RCV] / tsc_hz);
-		cmdline_printf(cl, "\t Established : %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_ESTABL] / tsc_hz);
-		cmdline_printf(cl, "\t Fin wait :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_FIN_WAIT] / tsc_hz);
-		cmdline_printf(cl, "\t Close wait :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_CLOSE_WAIT] / tsc_hz);
-		cmdline_printf(cl, "\t Last ACK :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_LAST_ACK] / tsc_hz);
-		cmdline_printf(cl, "\t Time wait :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_TIME_WAIT] / tsc_hz);
+		cmdline_printf(cl, "\t Syn sent : %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_SENT] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Syn rcv : %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_RCV] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Established : %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_ESTABL] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Fin wait :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_FIN_WAIT] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Close wait :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_CLOSE_WAIT] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Last ACK :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_LAST_ACK] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Time wait :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_TIME_WAIT] / prf_tsc_hz);
 	} else if (strcmp(res->target, "connections") == 0) {
 		dump_states(cl);
 	} else if (strcmp(res->target, "acl") == 0) {
@@ -579,7 +579,7 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 			break;
 		}
 	} else if (strcmp(res->target, "interface_stats") == 0) {
-		for (i = 0; i < MAX_PORTS; i++) {
+		for (i = 0; i < PRF_MAX_PORTS; i++) {
 			rte_eth_stats_get(i, &stats);
 			cmdline_printf(cl,      "Port %d :\t\n", i);
 			cmdline_printf(cl,      "\tRX pkts %"PRIu64" :\t\n", stats.ipackets);
@@ -635,7 +635,7 @@ static void cmd_create_sec_ctx_parsed(__attribute__((unused)) void *parsed_resul
 		}
 		j++;
 	}
-	if (j >= SEC_CTX_MAX_RULES) {
+	if (j >= PRF_SEC_CTX_MAX_RULES) {
 		cmdline_printf(cl, "\tSecurity context number exhaused\t\n");
 		return;
 	}
@@ -646,14 +646,14 @@ static void cmd_create_sec_ctx_parsed(__attribute__((unused)) void *parsed_resul
 	}
 	snprintf(new_ent->name, sizeof(new_ent->name), "%s", res->sec_ctx_name);
 	/*lookup free index*/
-	for (i = 0; i < SEC_CTX_MAX_RULES; i++) {
+	for (i = 0; i < PRF_SEC_CTX_MAX_RULES; i++) {
 		SLIST_FOREACH(ent, &global_sec_ctx_list, next) {
 			if (i == ent->num)
 				goto next_rule;
 		}
 		/*We find first free index, lets check for free ctx*/
 		RTE_LCORE_FOREACH_SLAVE(j) {
-			if (j == primarycore_id)
+			if (j == prf_primarycore_id)
 				continue;
 			if (rte_atomic64_read(&lcore_conf[j].rules[i].ref_cnt) != 0)
 				goto next_rule;
@@ -665,7 +665,7 @@ static void cmd_create_sec_ctx_parsed(__attribute__((unused)) void *parsed_resul
 			lcore_conf[j].rules[i].flags = 0;
 			lcore_conf[j].rules[i].syn_proxy_mss = DEFAULT_MSS;
 			lcore_conf[j].rules[i].syn_proxy_wscale = 0xf;
-			if (j == primarycore_id)
+			if (j == prf_primarycore_id)
 				continue;
 			/*check src track hash*/
 			if (lcore_conf[j].rules[i].hash_table == NULL) {
@@ -740,7 +740,7 @@ static void cmd_show_del_sec_ctx_parsed(void *parsed_result,
 	int i;
 
 	RTE_LCORE_FOREACH_SLAVE(i) {
-		if (i == primarycore_id)
+		if (i == prf_primarycore_id)
 			continue;
 		break;
 	}
@@ -765,17 +765,17 @@ static void cmd_show_del_sec_ctx_parsed(void *parsed_result,
 			cmdline_printf(cl,
 					"\t Src track rate %"PRIu64"\t\n"
 					"\t Src track bucket size %"PRIu64"\t\n",
-					tsc_hz / rule->period, rule->bucket_size);
+					prf_tsc_hz / rule->period, rule->bucket_size);
 		}
 		if (rule->flags & WHITE_LIST_CHECK) {
 			cmdline_printf(cl,
 					"\t White list on\t\n"
-					"\t White list timer %"PRIu64"\t\n", rule->white_list->ban_timer / tsc_hz);
+					"\t White list timer %"PRIu64"\t\n", rule->white_list->ban_timer / prf_tsc_hz);
 		}
 		if (rule->flags & BLACK_LIST_CHECK) {
 			cmdline_printf(cl,
 					"\t Black list on\t\n"
-					"\t Black list ban time %"PRIu64"\t\n", rule->black_list->ban_timer / tsc_hz);
+					"\t Black list ban time %"PRIu64"\t\n", rule->black_list->ban_timer / prf_tsc_hz);
 			if (rule->flags & SRC_TRACK_BAN) {
 				cmdline_printf(cl,
 					"\t Src track overload ban\t\n");
@@ -902,35 +902,35 @@ static void cmd_set_timer_parsed(void *parsed_result,
 				__attribute__((unused)) void *data)
 {
 	struct cmd_set_timer *res = parsed_result;
-	uint64_t timer_tsc = res->value * tsc_hz;
+	uint64_t timer_tsc = res->value * prf_tsc_hz;
 
 	if (strcmp(res->name, "tcp_syn_sent") == 0) {
 		tcp_timer_table[TCP_STATE_SYN_SENT] = timer_tsc;
-		cmdline_printf(cl, "\t Syn sent timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_SENT] / tsc_hz);
+		cmdline_printf(cl, "\t Syn sent timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_SENT] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_syn_rcvd") == 0) {
 		tcp_timer_table[TCP_STATE_SYN_RCV] = timer_tsc;
-		cmdline_printf(cl, "\t Syn rcv timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_RCV] / tsc_hz);
+		cmdline_printf(cl, "\t Syn rcv timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_RCV] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_established") == 0) {
 		tcp_timer_table[TCP_STATE_ESTABL] = timer_tsc;
-		cmdline_printf(cl, "\t TCP Established timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_ESTABL] / tsc_hz);
+		cmdline_printf(cl, "\t TCP Established timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_ESTABL] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_fin_wait") == 0) {
 		tcp_timer_table[TCP_STATE_FIN_WAIT] = timer_tsc;
-		cmdline_printf(cl, "\t Fin wait timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_FIN_WAIT] / tsc_hz);
+		cmdline_printf(cl, "\t Fin wait timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_FIN_WAIT] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_close_wait") == 0) {
 		tcp_timer_table[TCP_STATE_CLOSE_WAIT] = timer_tsc;
-		cmdline_printf(cl, "\t Close wait timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_CLOSE_WAIT] / tsc_hz);
+		cmdline_printf(cl, "\t Close wait timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_CLOSE_WAIT] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_last_ack") == 0) {
 		tcp_timer_table[TCP_STATE_LAST_ACK] = timer_tsc;
-		cmdline_printf(cl, "\t Last ACK timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_LAST_ACK] / tsc_hz);
+		cmdline_printf(cl, "\t Last ACK timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_LAST_ACK] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_time_wait") == 0) {
 		tcp_timer_table[TCP_STATE_TIME_WAIT] = timer_tsc;
-		cmdline_printf(cl, "\t Time wait timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_TIME_WAIT] / tsc_hz);
+		cmdline_printf(cl, "\t Time wait timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_TIME_WAIT] / prf_tsc_hz);
 		return;
 	}
 }
@@ -992,7 +992,7 @@ static void cmd_set_sec_ctx_params_1_parsed(void *parsed_result,
 		cmdline_printf(cl, "\t Sec context %s bucket size %d\t\n", res->ent->name, res->value);
 		return;
 	} else if (strcmp(res->arg, "per_second") == 0) {
-		period = tsc_hz / res->value;
+		period = prf_tsc_hz / res->value;
 		RTE_LCORE_FOREACH_SLAVE(i) {
 			rule = &lcore_conf[i].rules[res->ent->num];
 			rule->period = period;
@@ -1000,7 +1000,7 @@ static void cmd_set_sec_ctx_params_1_parsed(void *parsed_result,
 		cmdline_printf(cl, "\t Sec context %s rate %d new connections per second\t\n", res->ent->name, res->value);
 		return;
 	} else if (strcmp(res->arg, "per_minute") == 0) {
-		period = (tsc_hz * 60) / res->value;
+		period = (prf_tsc_hz * 60) / res->value;
 		RTE_LCORE_FOREACH_SLAVE(i) {
 			rule = &lcore_conf[i].rules[res->ent->num];
 			rule->period = period;
@@ -1008,7 +1008,7 @@ static void cmd_set_sec_ctx_params_1_parsed(void *parsed_result,
 		cmdline_printf(cl, "\t Sec context %s rate %d new connections per minute\t\n", res->ent->name, res->value);
 		return;
 	} else if (strcmp(res->arg, "per_hour") == 0) {
-		period = (tsc_hz * 3600) / res->value;
+		period = (prf_tsc_hz * 3600) / res->value;
 		RTE_LCORE_FOREACH_SLAVE(i) {
 			rule = &lcore_conf[i].rules[res->ent->num];
 			rule->period = period;
@@ -1061,7 +1061,7 @@ static void cmd_set_sec_ctx_params_2_parsed(void *parsed_result,
 		cmdline_printf(cl, "\t Sec context %s %d maximum connections per source ip\t\n", res->ent->name, res->value);
 		return;
 	} else if (strcmp(res->param, "syn_proxy_mss") == 0) {
-		for (i = ARRAY_SIZE(msstab) - 1; i ; i--) {
+		for (i = PRF_ARRAY_SIZE(msstab) - 1; i ; i--) {
 			if (res->value >= msstab[i])
 				break;
 		}
@@ -1128,11 +1128,11 @@ static void cmd_set_sec_ctx_params_3_parsed(void *parsed_result,
 	if (strcmp(res->param, "white_list") == 0) {
 		if (strcmp(res->arg, "on") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				if (i == primarycore_id)
+				if (i == prf_primarycore_id)
 					continue;
 				rule = &lcore_conf[i].rules[res->ent->num];
 				rule->flags |= WHITE_LIST_CHECK;
-				rule->white_list->ban_timer = IPSET_WHITE_LIST_DEF_TIMER * tsc_hz;
+				rule->white_list->ban_timer = IPSET_WHITE_LIST_DEF_TIMER * prf_tsc_hz;
 			}
 			cmdline_printf(cl, "\tSec context %s white list check on\t\n", res->ent->name);
 			return;
@@ -1148,11 +1148,11 @@ static void cmd_set_sec_ctx_params_3_parsed(void *parsed_result,
 	} else if (strcmp(res->param, "black_list") == 0) {
 		if (strcmp(res->arg, "on") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				if ((i == mastercore_id) || (i == primarycore_id))
+				if ((i == prf_mastercore_id) || (i == prf_primarycore_id))
 					continue;
 				rule = &lcore_conf[i].rules[res->ent->num];
 				rule->flags |= BLACK_LIST_CHECK;
-				rule->black_list->ban_timer = IPSET_BLACK_LIST_DEF_TIMER * tsc_hz;
+				rule->black_list->ban_timer = IPSET_BLACK_LIST_DEF_TIMER * prf_tsc_hz;
 			}
 			cmdline_printf(cl, "\tSec context %s black list check on\t\n", res->ent->name);
 			return;
@@ -1466,7 +1466,7 @@ static void cmd_del_acl_parsed(void *parsed_result,
 		if (ent->idx == res->idx) {
 			LIST_REMOVE(ent, next);
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				if (i == primarycore_id)
+				if (i == prf_primarycore_id)
 					continue;
 				lcore_conf[i].stats.acl_stat[ent->cnt_idx] = 0;
 			}
