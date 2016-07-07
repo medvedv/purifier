@@ -31,125 +31,125 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _STATEFUL_H_
-#define _STATEFUL_H_
+#ifndef _PRF_STATEFUL_H_
+#define _PRF_STATEFUL_H_
 
-#define GC_INTERVAL		1000
-#define GC_BUCKETS		128 /* 3 * 4kb in cache ~ 100 packet @ 14.88mpps*/
+#define PRF_GC_INTERVAL		1000
+#define PRF_GC_BUCKETS		128 /* 3 * 4kb in cache ~ 100 packet @ 14.88mpps*/
 
-#define TCP_CONN_HASH_SIZE	(1 << 22) /* 184.5Mb for 2^19 buckets; 1,5G for 2^22*/
-#define TCP_CONN_HASH_MASK	((TCP_CONN_HASH_SIZE) - 1)
-#define KEYS_PER_BUCKET		4
-#define NB_TCP_ENT		1048575
+#define PRF_TCP_CONN_HASH_SIZE	(1 << 22) /* 184.5Mb for 2^19 buckets; 1,5G for 2^22*/
+#define PRF_TCP_CONN_HASH_MASK	((PRF_TCP_CONN_HASH_SIZE) - 1)
+#define PRF_KEYS_PER_BUCKET		4
+#define PRF_NB_TCP_ENT		1048575
 
-#define TCPHDR_FIN		0x01
-#define TCPHDR_SYN		0x02
-#define TCPHDR_RST		0x04
-#define TCPHDR_PSH		0x08
-#define TCPHDR_ACK		0x10
-#define TCPHDR_URG		0x20
-#define TCPHDR_ECE		0x40
-#define TCPHDR_CWR		0x80
+#define PRF_TCPHDR_FIN		0x01
+#define PRF_TCPHDR_SYN		0x02
+#define PRF_TCPHDR_RST		0x04
+#define PRF_TCPHDR_PSH		0x08
+#define PRF_TCPHDR_ACK		0x10
+#define PRF_TCPHDR_URG		0x20
+#define PRF_TCPHDR_ECE		0x40
+#define PRF_TCPHDR_CWR		0x80
 
-#define TCP_SYN_SET		0
-#define TCP_SYNACK_SET		1
-#define TCP_FIN_SET		2
-#define TCP_ACK_SET		3
+#define PRF_TCP_SYN_SET		0
+#define PRF_TCP_SYNACK_SET		1
+#define PRF_TCP_FIN_SET		2
+#define PRF_TCP_ACK_SET		3
 
-#define TCP_STATE_NONE		0
-#define TCP_STATE_SYN_SENT	1
-#define TCP_STATE_SYN_RCV	2
-#define TCP_STATE_ESTABL	3
-#define TCP_STATE_FIN_WAIT	4
-#define TCP_STATE_CLOSE_WAIT	5
-#define TCP_STATE_LAST_ACK	6
-#define TCP_STATE_TIME_WAIT	7
-#define TCP_STATE_NB_STATES	8
+#define PRF_TCP_STATE_NONE		0
+#define PRF_TCP_STATE_SYN_SENT	1
+#define PRF_TCP_STATE_SYN_RCV	2
+#define PRF_TCP_STATE_ESTABL	3
+#define PRF_TCP_STATE_FIN_WAIT	4
+#define PRF_TCP_STATE_CLOSE_WAIT	5
+#define PRF_TCP_STATE_LAST_ACK	6
+#define PRF_TCP_STATE_TIME_WAIT	7
+#define PRF_TCP_STATE_NB_STATES	8
 
-#define TCP_IV		TCP_STATE_NONE
-#define TCP_SS		TCP_STATE_SYN_SENT
-#define TCP_SR		TCP_STATE_SYN_RCV
-#define TCP_ES		TCP_STATE_ESTABL
-#define TCP_FW		TCP_STATE_FIN_WAIT
-#define TCP_CW		TCP_STATE_CLOSE_WAIT
-#define TCP_LA		TCP_STATE_LAST_ACK
-#define TCP_TW		TCP_STATE_TIME_WAIT
+#define PRF_TCP_IV		PRF_TCP_STATE_NONE
+#define PRF_TCP_SS		PRF_TCP_STATE_SYN_SENT
+#define PRF_TCP_SR		PRF_TCP_STATE_SYN_RCV
+#define PRF_TCP_ES		PRF_TCP_STATE_ESTABL
+#define PRF_TCP_FW		PRF_TCP_STATE_FIN_WAIT
+#define PRF_TCP_CW		PRF_TCP_STATE_CLOSE_WAIT
+#define PRF_TCP_LA		PRF_TCP_STATE_LAST_ACK
+#define PRF_TCP_TW		PRF_TCP_STATE_TIME_WAIT
 
 struct prf_lcore_conf;
 
-static const uint8_t tcp_valid_flags[(TCPHDR_FIN|TCPHDR_SYN|TCPHDR_RST|TCPHDR_ACK|TCPHDR_URG) + 1]__rte_cache_aligned;
-static const uint8_t tcp_valid_flags[(TCPHDR_FIN|TCPHDR_SYN|TCPHDR_RST|TCPHDR_ACK|TCPHDR_URG) + 1] = {
-	[TCPHDR_SYN]				= 1,
-	[TCPHDR_SYN|TCPHDR_ACK]			= 1,
-	[TCPHDR_RST]				= 1,
-	[TCPHDR_RST|TCPHDR_ACK]			= 1,
-	[TCPHDR_FIN|TCPHDR_ACK]			= 1,
-	[TCPHDR_FIN|TCPHDR_ACK|TCPHDR_URG]	= 1,
-	[TCPHDR_ACK]				= 1,
-	[TCPHDR_ACK|TCPHDR_URG]			= 1,
+static const uint8_t prf_tcp_valid_flags[(PRF_TCPHDR_FIN|PRF_TCPHDR_SYN|PRF_TCPHDR_RST|PRF_TCPHDR_ACK|PRF_TCPHDR_URG) + 1]__rte_cache_aligned;
+static const uint8_t prf_tcp_valid_flags[(PRF_TCPHDR_FIN|PRF_TCPHDR_SYN|PRF_TCPHDR_RST|PRF_TCPHDR_ACK|PRF_TCPHDR_URG) + 1] = {
+	[PRF_TCPHDR_SYN]				= 1,
+	[PRF_TCPHDR_SYN|PRF_TCPHDR_ACK]			= 1,
+	[PRF_TCPHDR_RST]				= 1,
+	[PRF_TCPHDR_RST|PRF_TCPHDR_ACK]			= 1,
+	[PRF_TCPHDR_FIN|PRF_TCPHDR_ACK]			= 1,
+	[PRF_TCPHDR_FIN|PRF_TCPHDR_ACK|PRF_TCPHDR_URG]	= 1,
+	[PRF_TCPHDR_ACK]				= 1,
+	[PRF_TCPHDR_ACK|PRF_TCPHDR_URG]			= 1,
 };
 
-static const uint8_t tcp_trans_table[2][4][TCP_STATE_NB_STATES] __rte_cache_aligned;
-static const uint8_t tcp_trans_table[2][4][TCP_STATE_NB_STATES] = {
+static const uint8_t prf_tcp_trans_table[2][4][PRF_TCP_STATE_NB_STATES] __rte_cache_aligned;
+static const uint8_t prf_tcp_trans_table[2][4][PRF_TCP_STATE_NB_STATES] = {
 	{
 /* ORIGINAL DIRECTION*/
-/*			TCP_IV  TCP_SS  TCP_SR  TCP_ES  TCP_FW  TCP_CW  TCP_LA  TCP_TW */
-/*syn*/		{	TCP_SS, TCP_SS, TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_SS },
+/*			PRF_TCP_IV  PRF_TCP_SS  PRF_TCP_SR  PRF_TCP_ES  PRF_TCP_FW  PRF_TCP_CW  PRF_TCP_LA  PRF_TCP_TW */
+/*syn*/		{	PRF_TCP_SS, PRF_TCP_SS, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_SS },
 
-/*			TCP_IV  TCP_SS  TCP_SR  TCP_ES  TCP_FW  TCP_CW  TCP_LA  TCP_TW */
-/*syn ack*/	{	TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_IV },
+/*			PRF_TCP_IV  PRF_TCP_SS  PRF_TCP_SR  PRF_TCP_ES  PRF_TCP_FW  PRF_TCP_CW  PRF_TCP_LA  PRF_TCP_TW */
+/*syn ack*/	{	PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV },
 
-/*			TCP_IV  TCP_SS  TCP_SR  TCP_ES  TCP_FW  TCP_CW  TCP_LA  TCP_TW */
-/*fin*/		{	TCP_IV, TCP_IV, TCP_FW, TCP_FW, TCP_LA, TCP_LA, TCP_LA, TCP_TW },
+/*			PRF_TCP_IV  PRF_TCP_SS  PRF_TCP_SR  PRF_TCP_ES  PRF_TCP_FW  PRF_TCP_CW  PRF_TCP_LA  PRF_TCP_TW */
+/*fin*/		{	PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_FW, PRF_TCP_FW, PRF_TCP_LA, PRF_TCP_LA, PRF_TCP_LA, PRF_TCP_TW },
 
-/*			TCP_IV  TCP_SS  TCP_SR  TCP_ES  TCP_FW  TCP_CW  TCP_LA  TCP_TW */
-/*ack*/		{	TCP_IV, TCP_IV, TCP_ES, TCP_ES, TCP_CW, TCP_CW, TCP_TW, TCP_TW }
+/*			PRF_TCP_IV  PRF_TCP_SS  PRF_TCP_SR  PRF_TCP_ES  PRF_TCP_FW  PRF_TCP_CW  PRF_TCP_LA  PRF_TCP_TW */
+/*ack*/		{	PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_ES, PRF_TCP_ES, PRF_TCP_CW, PRF_TCP_CW, PRF_TCP_TW, PRF_TCP_TW }
 	},
 	{
 /* REPLY DIRECTION*/
-/*			TCP_IV  TCP_SS  TCP_SR  TCP_ES  TCP_FW  TCP_CW  TCP_LA  TCP_TW */
-/*syn*/		{	TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_IV },
+/*			PRF_TCP_IV  PRF_TCP_SS  PRF_TCP_SR  PRF_TCP_ES  PRF_TCP_FW  PRF_TCP_CW  PRF_TCP_LA  PRF_TCP_TW */
+/*syn*/		{	PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV },
 
-/*			TCP_IV  TCP_SS  TCP_SR  TCP_ES  TCP_FW  TCP_CW  TCP_LA  TCP_TW */
-/*syn ack*/	{	TCP_IV, TCP_SR, TCP_SR, TCP_IV, TCP_IV, TCP_IV, TCP_IV, TCP_IV },
+/*			PRF_TCP_IV  PRF_TCP_SS  PRF_TCP_SR  PRF_TCP_ES  PRF_TCP_FW  PRF_TCP_CW  PRF_TCP_LA  PRF_TCP_TW */
+/*syn ack*/	{	PRF_TCP_IV, PRF_TCP_SR, PRF_TCP_SR, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_IV },
 
-/*			TCP_IV  TCP_SS  TCP_SR  TCP_ES  TCP_FW  TCP_CW  TCP_LA  TCP_TW */
-/*fin*/		{	TCP_IV, TCP_IV, TCP_FW, TCP_FW, TCP_LA, TCP_LA, TCP_LA, TCP_TW },
+/*			PRF_TCP_IV  PRF_TCP_SS  PRF_TCP_SR  PRF_TCP_ES  PRF_TCP_FW  PRF_TCP_CW  PRF_TCP_LA  PRF_TCP_TW */
+/*fin*/		{	PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_FW, PRF_TCP_FW, PRF_TCP_LA, PRF_TCP_LA, PRF_TCP_LA, PRF_TCP_TW },
 
-/*			TCP_IV  TCP_SS  TCP_SR  TCP_ES  TCP_FW  TCP_CW  TCP_LA  TCP_TW*/
-/*ack*/		{	TCP_IV, TCP_IV, TCP_SR, TCP_ES, TCP_CW, TCP_CW, TCP_TW, TCP_TW }
+/*			PRF_TCP_IV  PRF_TCP_SS  PRF_TCP_SR  PRF_TCP_ES  PRF_TCP_FW  PRF_TCP_CW  PRF_TCP_LA  PRF_TCP_TW*/
+/*ack*/		{	PRF_TCP_IV, PRF_TCP_IV, PRF_TCP_SR, PRF_TCP_ES, PRF_TCP_CW, PRF_TCP_CW, PRF_TCP_TW, PRF_TCP_TW }
 	}
 };
 
-#define TCPOPT_EOL		0
-#define TCPOPT_NOP		1
-#define TCPOPT_MSS		2
-#define TCPOPT_WINDOW		3
-#define TCPOPT_SACK_PERM	4
-#define TCPOPT_SACK		5
-#define TCPOPT_TIMESTAMP	8
+#define PRF_TCPOPT_EOL		0
+#define PRF_TCPOPT_NOP		1
+#define PRF_TCPOPT_MSS		2
+#define PRF_TCPOPT_WINDOW		3
+#define PRF_TCPOPT_SACK_PERM	4
+#define PRF_TCPOPT_SACK		5
+#define PRF_TCPOPT_TIMESTAMP	8
 
-#define TCPOLEN_MSS		4
-#define TCPOLEN_WINDOW		3
-#define TCPOLEN_SACK_PERM	2
-#define TCPOLEN_TIMESTAMP	10
+#define PRF_TCPOLEN_MSS		4
+#define PRF_TCPOLEN_WINDOW		3
+#define PRF_TCPOLEN_SACK_PERM	2
+#define PRF_TCPOLEN_TIMESTAMP	10
 
-#define TCP_MAX_WINSHIFT	14
+#define PRF_TCP_MAX_WINSHIFT	14
 /*td_flags defines*/
-#define TCP_FLAG_WSCALE		0x1
-#define TCP_FLAG_SACK_PERM	0x2
-#define TCP_FLAG_CLOSE_INIT     0x4	/*For future use to avoid closing after FIN retransmit*/
+#define PRF_TCP_FLAG_WSCALE		0x1
+#define PRF_TCP_FLAG_SACK_PERM	0x2
+#define PRF_TCP_FLAG_CLOSE_INIT     0x4	/*For future use to avoid closing after FIN retransmit*/
 
-#define SEQ_LEQ(a, b)		((int)((a)-(b)) <= 0)
-#define SEQ_GEQ(a, b)		((int)((a)-(b)) >= 0)
-#define SEQ_GT(a, b)		((int)((a)-(b)) > 0)
+#define PRF_SEQ_LEQ(a, b)		((int)((a)-(b)) <= 0)
+#define PRF_SEQ_GEQ(a, b)		((int)((a)-(b)) >= 0)
+#define PRF_SEQ_GT(a, b)		((int)((a)-(b)) > 0)
 
-#define DIR_ORIG		0
-#define DIR_REV			1
-#define DIR_NO_MATCH		2
+#define PRF_DIR_ORIG		0
+#define PRF_DIR_REV			1
+#define PRF_DIR_NO_MATCH		2
 
-extern uint64_t tcp_timer_table[TCP_STATE_NB_STATES] __rte_cache_aligned;
-extern uint32_t hash_initval;
+extern uint64_t prf_tcp_timer_table[PRF_TCP_STATE_NB_STATES] __rte_cache_aligned;
+extern uint32_t prf_hash_initval;
 
 struct tcpopts {
 	uint16_t	mss;
@@ -194,23 +194,23 @@ struct tcp_ent {
 };
 
 struct tcp_key_bucket {
-	struct conn_tuple	key[KEYS_PER_BUCKET];
+	struct conn_tuple	key[PRF_KEYS_PER_BUCKET];
 	uint64_t		pad;
 	struct tcp_ent		*tp;
 } __rte_cache_aligned;
 
 struct timer_bucket {
-	uint64_t		idle_timer[KEYS_PER_BUCKET];
+	uint64_t		idle_timer[PRF_KEYS_PER_BUCKET];
 };
 
 struct tcp_conn_bucket {
-	struct tcp_conn		tcp_conn[KEYS_PER_BUCKET];
+	struct tcp_conn		tcp_conn[PRF_KEYS_PER_BUCKET];
 } __rte_cache_aligned;
 
 struct ipv4_tcp_hash {
-	struct tcp_key_bucket	tcp_key_bucket[TCP_CONN_HASH_SIZE];
-	struct timer_bucket	timer_bucket[TCP_CONN_HASH_SIZE]__rte_cache_aligned;
-	struct tcp_conn_bucket	tcp_conn_bucket[TCP_CONN_HASH_SIZE];
+	struct tcp_key_bucket	tcp_key_bucket[PRF_TCP_CONN_HASH_SIZE];
+	struct timer_bucket	timer_bucket[PRF_TCP_CONN_HASH_SIZE]__rte_cache_aligned;
+	struct tcp_conn_bucket	tcp_conn_bucket[PRF_TCP_CONN_HASH_SIZE];
 };
 
 /* For bulk lookup */
@@ -241,4 +241,4 @@ int tcp_get_event(uint8_t flags);
 
 int get_opts(uint8_t *ptr, int length, struct tcpopts *options);
 
-#endif
+#endif /* _PRF_STATEFUL_H_ */

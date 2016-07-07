@@ -256,8 +256,8 @@ dump_states(struct cmdline *cl)
 	RTE_LCORE_FOREACH_SLAVE(i) {
 		if (i == prf_primarycore_id)
 			continue;
-		for (j = 0; j < TCP_CONN_HASH_SIZE; j++) {
-			for (k = 0; k < KEYS_PER_BUCKET; k++) {
+		for (j = 0; j < PRF_TCP_CONN_HASH_SIZE; j++) {
+			for (k = 0; k < PRF_KEYS_PER_BUCKET; k++) {
 				if (prf_lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k].src_addr == 0)
 					continue;
 				memcpy((uint8_t *)&tuple, (uint8_t *)&prf_lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k], sizeof(struct conn_tuple));
@@ -267,29 +267,29 @@ dump_states(struct cmdline *cl)
 				if ((prf_lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k].src_addr == 0) || (timer <= prf_lcore_conf[i].timer))
 					continue;
 				switch (tcp_conn.state) {
-				case TCP_IV:
-					snprintf(tcp_state, sizeof(tcp_state), "TCP_STATE_NONE");
+				case PRF_TCP_IV:
+					snprintf(tcp_state, sizeof(tcp_state), "PRF_TCP_STATE_NONE");
 					break;
-				case TCP_SS:
-					snprintf(tcp_state, sizeof(tcp_state), "TCP_STATE_SYN_SENT");
+				case PRF_TCP_SS:
+					snprintf(tcp_state, sizeof(tcp_state), "PRF_TCP_STATE_SYN_SENT");
 					break;
-				case TCP_SR:
-					snprintf(tcp_state, sizeof(tcp_state), "TCP_STATE_SYN_RCV");
+				case PRF_TCP_SR:
+					snprintf(tcp_state, sizeof(tcp_state), "PRF_TCP_STATE_SYN_RCV");
 					break;
-				case TCP_ES:
-					snprintf(tcp_state, sizeof(tcp_state), "TCP_STATE_ESTABL");
+				case PRF_TCP_ES:
+					snprintf(tcp_state, sizeof(tcp_state), "PRF_TCP_STATE_ESTABL");
 					break;
-				case TCP_FW:
-					snprintf(tcp_state, sizeof(tcp_state), "TCP_STATE_FIN_WAIT");
+				case PRF_TCP_FW:
+					snprintf(tcp_state, sizeof(tcp_state), "PRF_TCP_STATE_FIN_WAIT");
 					break;
-				case TCP_CW:
-					snprintf(tcp_state, sizeof(tcp_state), "TCP_STATE_CLOSE_WAIT");
+				case PRF_TCP_CW:
+					snprintf(tcp_state, sizeof(tcp_state), "PRF_TCP_STATE_CLOSE_WAIT");
 					break;
-				case TCP_LA:
-					snprintf(tcp_state, sizeof(tcp_state), "TCP_STATE_LAST_ACK");
+				case PRF_TCP_LA:
+					snprintf(tcp_state, sizeof(tcp_state), "PRF_TCP_STATE_LAST_ACK");
 					break;
-				case TCP_TW:
-					snprintf(tcp_state, sizeof(tcp_state), "TCP_STATE_TIME_WAIT");
+				case PRF_TCP_TW:
+					snprintf(tcp_state, sizeof(tcp_state), "PRF_TCP_STATE_TIME_WAIT");
 					break;
 				default:
 					snprintf(tcp_state, sizeof(tcp_state), "ERROR");
@@ -537,13 +537,13 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 		cmdline_printf(cl,	"\t embrionic_counter %"PRIu64"\t\n", counter);
 	} else if (strcmp(res->target, "timers") == 0) {
 		cmdline_printf(cl, "TCP Timers:\t\n");
-		cmdline_printf(cl, "\t Syn sent : %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_SENT] / prf_tsc_hz);
-		cmdline_printf(cl, "\t Syn rcv : %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_RCV] / prf_tsc_hz);
-		cmdline_printf(cl, "\t Established : %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_ESTABL] / prf_tsc_hz);
-		cmdline_printf(cl, "\t Fin wait :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_FIN_WAIT] / prf_tsc_hz);
-		cmdline_printf(cl, "\t Close wait :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_CLOSE_WAIT] / prf_tsc_hz);
-		cmdline_printf(cl, "\t Last ACK :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_LAST_ACK] / prf_tsc_hz);
-		cmdline_printf(cl, "\t Time wait :  %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_TIME_WAIT] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Syn sent : %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_SYN_SENT] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Syn rcv : %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_SYN_RCV] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Established : %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_ESTABL] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Fin wait :  %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_FIN_WAIT] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Close wait :  %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_CLOSE_WAIT] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Last ACK :  %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_LAST_ACK] / prf_tsc_hz);
+		cmdline_printf(cl, "\t Time wait :  %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_TIME_WAIT] / prf_tsc_hz);
 	} else if (strcmp(res->target, "connections") == 0) {
 		dump_states(cl);
 	} else if (strcmp(res->target, "acl") == 0) {
@@ -905,32 +905,32 @@ static void cmd_set_timer_parsed(void *parsed_result,
 	uint64_t timer_tsc = res->value * prf_tsc_hz;
 
 	if (strcmp(res->name, "tcp_syn_sent") == 0) {
-		tcp_timer_table[TCP_STATE_SYN_SENT] = timer_tsc;
-		cmdline_printf(cl, "\t Syn sent timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_SENT] / prf_tsc_hz);
+		prf_tcp_timer_table[PRF_TCP_STATE_SYN_SENT] = timer_tsc;
+		cmdline_printf(cl, "\t Syn sent timer set to %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_SYN_SENT] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_syn_rcvd") == 0) {
-		tcp_timer_table[TCP_STATE_SYN_RCV] = timer_tsc;
-		cmdline_printf(cl, "\t Syn rcv timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_SYN_RCV] / prf_tsc_hz);
+		prf_tcp_timer_table[PRF_TCP_STATE_SYN_RCV] = timer_tsc;
+		cmdline_printf(cl, "\t Syn rcv timer set to %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_SYN_RCV] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_established") == 0) {
-		tcp_timer_table[TCP_STATE_ESTABL] = timer_tsc;
-		cmdline_printf(cl, "\t TCP Established timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_ESTABL] / prf_tsc_hz);
+		prf_tcp_timer_table[PRF_TCP_STATE_ESTABL] = timer_tsc;
+		cmdline_printf(cl, "\t TCP Established timer set to %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_ESTABL] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_fin_wait") == 0) {
-		tcp_timer_table[TCP_STATE_FIN_WAIT] = timer_tsc;
-		cmdline_printf(cl, "\t Fin wait timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_FIN_WAIT] / prf_tsc_hz);
+		prf_tcp_timer_table[PRF_TCP_STATE_FIN_WAIT] = timer_tsc;
+		cmdline_printf(cl, "\t Fin wait timer set to %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_FIN_WAIT] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_close_wait") == 0) {
-		tcp_timer_table[TCP_STATE_CLOSE_WAIT] = timer_tsc;
-		cmdline_printf(cl, "\t Close wait timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_CLOSE_WAIT] / prf_tsc_hz);
+		prf_tcp_timer_table[PRF_TCP_STATE_CLOSE_WAIT] = timer_tsc;
+		cmdline_printf(cl, "\t Close wait timer set to %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_CLOSE_WAIT] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_last_ack") == 0) {
-		tcp_timer_table[TCP_STATE_LAST_ACK] = timer_tsc;
-		cmdline_printf(cl, "\t Last ACK timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_LAST_ACK] / prf_tsc_hz);
+		prf_tcp_timer_table[PRF_TCP_STATE_LAST_ACK] = timer_tsc;
+		cmdline_printf(cl, "\t Last ACK timer set to %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_LAST_ACK] / prf_tsc_hz);
 		return;
 	} else if (strcmp(res->name, "tcp_time_wait") == 0) {
-		tcp_timer_table[TCP_STATE_TIME_WAIT] = timer_tsc;
-		cmdline_printf(cl, "\t Time wait timer set to %"PRIu64"\t\n", tcp_timer_table[TCP_STATE_TIME_WAIT] / prf_tsc_hz);
+		prf_tcp_timer_table[PRF_TCP_STATE_TIME_WAIT] = timer_tsc;
+		cmdline_printf(cl, "\t Time wait timer set to %"PRIu64"\t\n", prf_tcp_timer_table[PRF_TCP_STATE_TIME_WAIT] / prf_tsc_hz);
 		return;
 	}
 }

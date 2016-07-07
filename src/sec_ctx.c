@@ -142,8 +142,8 @@ src_track_node_add(struct src_track_hash *hash_table,
 	uint32_t bucket;
 	struct src_track_ent *ent, *cur;
 
-	bucket = rte_jhash_1word(key, hash_initval) & SRC_TRACK_HASH_MASK;
-	for (i = 0; i < SRC_TRACK_KEYS_PER_BUCKET; i++) {
+	bucket = rte_jhash_1word(key, prf_hash_initval) & SRC_TRACK_HASH_MASK;
+	for (i = 0; i < SRC_TRACK_PRF_KEYS_PER_BUCKET; i++) {
 		if (hash_table->key_bucket[bucket].key[i] == 0) {
 			hash_table->key_bucket[bucket].key[i] = key;
 			*node = &hash_table->node_bucket[bucket].node[i];
@@ -183,9 +183,9 @@ src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
 	if (key == 0)
 		return -EINVAL;
 
-	bucket = rte_jhash_1word(key, hash_initval) & SRC_TRACK_HASH_MASK;
+	bucket = rte_jhash_1word(key, prf_hash_initval) & SRC_TRACK_HASH_MASK;
 
-	for (i = 0; i < SRC_TRACK_KEYS_PER_BUCKET; i++) {
+	for (i = 0; i < SRC_TRACK_PRF_KEYS_PER_BUCKET; i++) {
 		if (hash_table->key_bucket[bucket].key[i] == key) {
 			hash_table->key_bucket[bucket].key[i] = 0;
 			memset(&hash_table->node_bucket[bucket].node[i], 0, sizeof(struct src_track_node));
@@ -227,8 +227,8 @@ src_track_node_lookup(struct src_track_hash *hash_table,
 	uint32_t bucket;
 	struct src_track_ent *cur;
 
-	bucket = rte_jhash_1word(key, hash_initval) & SRC_TRACK_HASH_MASK;
-	for (i = 0; i < SRC_TRACK_KEYS_PER_BUCKET; i++) {
+	bucket = rte_jhash_1word(key, prf_hash_initval) & SRC_TRACK_HASH_MASK;
+	for (i = 0; i < SRC_TRACK_PRF_KEYS_PER_BUCKET; i++) {
 		if (hash_table->key_bucket[bucket].key[i] == key) {
 			*node = &hash_table->node_bucket[bucket].node[i];
 			return 0;
@@ -340,7 +340,7 @@ ipset_lookup(struct ipset_hash *hash, uint32_t key, uint64_t time)
 	int i;
 	uint32_t bucket;
 
-	bucket = rte_jhash_1word(key, hash_initval) & IPSET_HASH_MASK;
+	bucket = rte_jhash_1word(key, prf_hash_initval) & IPSET_HASH_MASK;
 
 	rte_prefetch0((void *)&hash->bucket[bucket].key[0]);
 	rte_prefetch0((void *)&hash->bucket[bucket].timer[0]);
@@ -367,7 +367,7 @@ ipset_add(struct ipset_hash *hash, uint32_t key, uint64_t time)
 	int i;
 	uint32_t bucket;
 
-	bucket = rte_jhash_1word(key, hash_initval);
+	bucket = rte_jhash_1word(key, prf_hash_initval);
 
 	rte_prefetch0((void *)&hash->bucket[bucket].key[0]);
 	rte_prefetch0((void *)&hash->bucket[bucket].timer[0]);

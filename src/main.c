@@ -361,8 +361,8 @@ tcp_sanity_check(struct rte_mbuf **pkt_in, struct rte_mbuf **pkt_out,
 			continue;
 		}
 
-		tcpflags = (tcp_hdr->tcp_flags & ~(TCPHDR_ECE|TCPHDR_CWR|TCPHDR_PSH));
-		if (unlikely(!tcp_valid_flags[tcpflags])) {
+		tcpflags = (tcp_hdr->tcp_flags & ~(PRF_TCPHDR_ECE|PRF_TCPHDR_CWR|PRF_TCPHDR_PSH));
+		if (unlikely(!prf_tcp_valid_flags[tcpflags])) {
 			++conf->stats.bad_flags;
 			rte_pktmbuf_free(m);
 			continue;
@@ -426,7 +426,7 @@ worker_main_loop(void)
 	const uint8_t *acl_p[PRF_MAX_PKT_BURST];
 	uint32_t result[PRF_MAX_PKT_BURST];
 	const uint64_t drain_tsc = (prf_tsc_hz + US_PER_S - 1) / US_PER_S * BURST_TX_DRAIN_US;
-	const uint64_t gc_int_tsc = (prf_tsc_hz + US_PER_S - 1) / US_PER_S * GC_INTERVAL;
+	const uint64_t gc_int_tsc = (prf_tsc_hz + US_PER_S - 1) / US_PER_S * PRF_GC_INTERVAL;
 	uint64_t diff_drain_tsc, diff_gc_tsc, cur_tsc, prev_drain_tsc, prev_gc_tsc;
 	uint64_t prev_poll_tsc, diff_poll_tsc;
 	int  cb, j, lcore_id, port_id, nb_rx;
@@ -661,7 +661,7 @@ MAIN(int argc, char **argv)
 	if (prf_pktmbuf_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init mbuf pool\n");
 
-	prf_tcp_ent_pool = rte_mempool_create("prf_tcp_ent_pool", NB_TCP_ENT,
+	prf_tcp_ent_pool = rte_mempool_create("prf_tcp_ent_pool", PRF_NB_TCP_ENT,
 					sizeof(struct tcp_ent), 32,
 					0, NULL, NULL, NULL, NULL, PRF_SOCKET0, 0);
 
@@ -697,13 +697,13 @@ MAIN(int argc, char **argv)
 	printf("Poll TSC %"PRIu64"\n", poll_tsc);
 
 	/*init timer table*/
-	tcp_timer_table[TCP_STATE_SYN_SENT]	= prf_tsc_hz * 20;
-	tcp_timer_table[TCP_STATE_SYN_RCV]	= prf_tsc_hz * 20;
-	tcp_timer_table[TCP_STATE_ESTABL]	= prf_tsc_hz * 1800;
-	tcp_timer_table[TCP_STATE_FIN_WAIT]	= prf_tsc_hz * 120;
-	tcp_timer_table[TCP_STATE_CLOSE_WAIT]	= prf_tsc_hz * 120;
-	tcp_timer_table[TCP_STATE_LAST_ACK]	= prf_tsc_hz * 120;
-	tcp_timer_table[TCP_STATE_TIME_WAIT]	= prf_tsc_hz * 120;
+	prf_tcp_timer_table[PRF_TCP_STATE_SYN_SENT]	= prf_tsc_hz * 20;
+	prf_tcp_timer_table[PRF_TCP_STATE_SYN_RCV]	= prf_tsc_hz * 20;
+	prf_tcp_timer_table[PRF_TCP_STATE_ESTABL]	= prf_tsc_hz * 1800;
+	prf_tcp_timer_table[PRF_TCP_STATE_FIN_WAIT]	= prf_tsc_hz * 120;
+	prf_tcp_timer_table[PRF_TCP_STATE_CLOSE_WAIT]	= prf_tsc_hz * 120;
+	prf_tcp_timer_table[PRF_TCP_STATE_LAST_ACK]	= prf_tsc_hz * 120;
+	prf_tcp_timer_table[PRF_TCP_STATE_TIME_WAIT]	= prf_tsc_hz * 120;
 
 	init_acl_config();
 	/*init fake acl context*/

@@ -40,7 +40,7 @@
 
 #define SRC_TRACK_HASH_SIZE		(1 << 16) /* 128Mb for 2^18 buckets */
 #define SRC_TRACK_HASH_MASK		((SRC_TRACK_HASH_SIZE) - 1)
-#define SRC_TRACK_KEYS_PER_BUCKET	14
+#define SRC_TRACK_PRF_KEYS_PER_BUCKET	14
 #define NB_SRC_TRACK_ENT		131071
 
 #define NB_IPSET_KEYS			16
@@ -108,12 +108,12 @@ struct src_track_ent {
 } __rte_cache_aligned;
 
 struct src_track_key_bucket {
-	uint32_t		key[SRC_TRACK_KEYS_PER_BUCKET];
+	uint32_t		key[SRC_TRACK_PRF_KEYS_PER_BUCKET];
 	struct src_track_ent	*head;
 } __rte_cache_aligned;
 
 struct src_track_node_bucket {
-	struct src_track_node	node[SRC_TRACK_KEYS_PER_BUCKET];
+	struct src_track_node	node[SRC_TRACK_PRF_KEYS_PER_BUCKET];
 } __rte_cache_aligned;
 
 struct src_track_hash {
