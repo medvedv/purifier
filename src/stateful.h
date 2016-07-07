@@ -151,21 +151,21 @@ static const uint8_t prf_tcp_trans_table[2][4][PRF_TCP_STATE_NB_STATES] = {
 extern uint64_t prf_tcp_timer_table[PRF_TCP_STATE_NB_STATES] __rte_cache_aligned;
 extern uint32_t prf_hash_initval;
 
-struct tcpopts {
+struct prf_tcpopts {
 	uint16_t	mss;
 	uint8_t		wscale;
 	uint8_t		sackok;
 };
 
 
-struct conn_tuple {
+struct prf_conn_tuple {
 	uint32_t	src_addr;
 	uint32_t	dst_addr;
 	uint16_t	src_port;
 	uint16_t	dst_port;
 };
 
-struct tcp_conn_state {
+struct prf_tcp_conn_state {
 	uint32_t	packets;
 	uint32_t	bytes;
 	uint32_t	td_end;
@@ -175,70 +175,70 @@ struct tcp_conn_state {
 	uint8_t		td_wscale;
 } __attribute__((__packed__));
 
-struct src_track_node;
+struct prf_src_track_node;
 
-struct tcp_conn {
-	struct tcp_conn_state	dir[2];
+struct prf_tcp_conn {
+	struct prf_tcp_conn_state	dir[2];
 	uint32_t		seq_diff;
 	uint16_t		state;
 	uint16_t		flags;
-	struct src_track_node	*src_track_node;
+	struct prf_src_track_node	*prf_src_track_node;
 	struct rte_mbuf		*m;
 } __attribute__((__packed__));
 
-struct tcp_ent {
-	struct tcp_ent		*next;
+struct prf_tcp_ent {
+	struct prf_tcp_ent		*next;
 	uint64_t		idle_timer;
-	struct conn_tuple	key;
-	struct tcp_conn		tcp_conn __rte_cache_aligned;
+	struct prf_conn_tuple	key;
+	struct prf_tcp_conn		prf_tcp_conn __rte_cache_aligned;
 };
 
-struct tcp_key_bucket {
-	struct conn_tuple	key[PRF_KEYS_PER_BUCKET];
+struct prf_tcp_key_bucket {
+	struct prf_conn_tuple	key[PRF_KEYS_PER_BUCKET];
 	uint64_t		pad;
-	struct tcp_ent		*tp;
+	struct prf_tcp_ent		*tp;
 } __rte_cache_aligned;
 
-struct timer_bucket {
+struct prf_timer_bucket {
 	uint64_t		idle_timer[PRF_KEYS_PER_BUCKET];
 };
 
-struct tcp_conn_bucket {
-	struct tcp_conn		tcp_conn[PRF_KEYS_PER_BUCKET];
+struct prf_tcp_conn_bucket {
+	struct prf_tcp_conn		prf_tcp_conn[PRF_KEYS_PER_BUCKET];
 } __rte_cache_aligned;
 
-struct ipv4_tcp_hash {
-	struct tcp_key_bucket	tcp_key_bucket[PRF_TCP_CONN_HASH_SIZE];
-	struct timer_bucket	timer_bucket[PRF_TCP_CONN_HASH_SIZE]__rte_cache_aligned;
-	struct tcp_conn_bucket	tcp_conn_bucket[PRF_TCP_CONN_HASH_SIZE];
+struct prf_ipv4_tcp_hash {
+	struct prf_tcp_key_bucket	prf_tcp_key_bucket[PRF_TCP_CONN_HASH_SIZE];
+	struct prf_timer_bucket	prf_timer_bucket[PRF_TCP_CONN_HASH_SIZE]__rte_cache_aligned;
+	struct prf_tcp_conn_bucket	prf_tcp_conn_bucket[PRF_TCP_CONN_HASH_SIZE];
 };
 
 /* For bulk lookup */
-struct tcp_lookup {
-	int		dir;
-	struct rte_mbuf	*m;
-	uint64_t	*timer;
-	struct tcp_conn	*tcp_conn;
+struct prf_tcp_lookup {
+	int			dir;
+	struct rte_mbuf		*m;
+	uint64_t		*timer;
+	struct prf_tcp_conn	*prf_tcp_conn;
 };
 
-struct ipv4_tcp_hash *ipv4_tcp_hash_init(unsigned lcore_id);
+struct prf_ipv4_tcp_hash *prf_ipv4_tcp_hash_init(unsigned lcore_id);
 
-void process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m, struct tcp_conn *tcp_conn, uint64_t *timer, uint64_t time, int dir);
+void prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m, struct prf_tcp_conn *prf_tcp_conn, uint64_t *timer, uint64_t time, int dir);
 
-int ipv4_tcp_conn_add(struct prf_lcore_conf *conf, uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint64_t **timer, struct tcp_conn **tcp_conn);
+int prf_ipv4_tcp_conn_add(struct prf_lcore_conf *conf, uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint64_t **timer, struct prf_tcp_conn **prf_tcp_conn);
 
-void ipv4_tcp_conn_del_key(struct prf_lcore_conf *conf, uint64_t bucket, int index);
+void prf_ipv4_tcp_conn_del_key(struct prf_lcore_conf *conf, uint64_t bucket, int index);
 
-int ipv4_tcp_conn_lookup(struct prf_lcore_conf *conf, struct conn_tuple *key, uint64_t **timer, struct tcp_conn **tcp_conn);
+int prf_ipv4_tcp_conn_lookup(struct prf_lcore_conf *conf, struct prf_conn_tuple *key, uint64_t **timer, struct prf_tcp_conn **prf_tcp_conn);
 
-int ipv4_tcp_conn_lookup_burst(struct prf_lcore_conf *conf, struct rte_mbuf **mb_arr, struct rte_mbuf **mb_new, int nb_pkt, uint64_t time);
+int prf_ipv4_tcp_conn_lookup_burst(struct prf_lcore_conf *conf, struct rte_mbuf **mb_arr, struct rte_mbuf **mb_new, int nb_pkt, uint64_t time);
 
-void ipv4_tcp_garbage_collect(struct prf_lcore_conf *conf, uint64_t time);
+void prf_ipv4_tcp_garbage_collect(struct prf_lcore_conf *conf, uint64_t time);
 
-inline uint32_t tcp_seq_plus_len(uint32_t seq, uint32_t len, uint8_t flags);
+inline uint32_t prf_tcp_seq_plus_len(uint32_t seq, uint32_t len, uint8_t flags);
 
-int tcp_get_event(uint8_t flags);
+int prf_tcp_get_event(uint8_t flags);
 
-int get_opts(uint8_t *ptr, int length, struct tcpopts *options);
+int prf_get_opts(uint8_t *ptr, int length, struct prf_tcpopts *options);
 
 #endif /* _PRF_STATEFUL_H_ */

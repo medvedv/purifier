@@ -34,9 +34,9 @@
 #ifndef _SEC_CTX_API_H_
 #define _SEC_CTX_API_H_
 
-struct tcpopts;
+struct prf_tcpopts;
 
-uint8_t compress_opt(struct tcpopts *options);
+uint8_t compress_opt(struct prf_tcpopts *options);
 
 uint32_t synproxy_hash(uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, uint32_t count, int c);
 
@@ -47,17 +47,17 @@ int synproxy_cookie(uint32_t cookie, uint32_t saddr, uint32_t daddr,
 				uint16_t sport, uint16_t dport, uint32_t sseq,
 				uint32_t count, uint32_t maxdiff);
 
-inline int synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th, uint32_t time_min, struct tcpopts *options);
+inline int synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th, uint32_t time_min, struct prf_tcpopts *options);
 
-int src_track_node_add(struct src_track_hash *hash_table, uint32_t key, struct src_track_node **node);
+int prf_src_track_node_add(struct src_track_hash *hash_table, uint32_t key, struct prf_src_track_node **node);
 
-int src_track_node_del(struct src_track_hash *hash_table, uint32_t key);
+int prf_src_track_node_del(struct src_track_hash *hash_table, uint32_t key);
 
-int src_track_node_lookup(struct src_track_hash *hash_table, uint32_t key, struct src_track_node **node);
+int prf_src_track_node_lookup(struct src_track_hash *hash_table, uint32_t key, struct prf_src_track_node **node);
 
-int src_track_rate_check(struct src_track_node *node, struct sec_ctx_rule *rule, uint64_t time);
+int src_track_rate_check(struct prf_src_track_node *node, struct sec_ctx_rule *rule, uint64_t time);
 
-int src_track_checkout(struct sec_ctx_rule *rule, uint32_t key, uint64_t time, struct src_track_node **node);
+int src_track_checkout(struct sec_ctx_rule *rule, uint32_t key, uint64_t time, struct prf_src_track_node **node);
 
 int ipset_lookup(struct ipset_hash *hash, uint32_t key, uint64_t time);
 

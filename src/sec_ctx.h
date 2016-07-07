@@ -94,7 +94,7 @@ struct sec_ctx_rule {
 	struct ipset_hash	*black_list;
 } __rte_cache_aligned;
 
-struct src_track_node {
+struct prf_src_track_node {
 	uint32_t		key;
 	uint32_t		counter;
 	uint64_t		time;
@@ -104,7 +104,7 @@ struct src_track_node {
 
 struct src_track_ent {
 	struct src_track_ent	*next;
-	struct src_track_node	node;
+	struct prf_src_track_node	node;
 } __rte_cache_aligned;
 
 struct src_track_key_bucket {
@@ -112,13 +112,13 @@ struct src_track_key_bucket {
 	struct src_track_ent	*head;
 } __rte_cache_aligned;
 
-struct src_track_node_bucket {
-	struct src_track_node	node[SRC_TRACK_PRF_KEYS_PER_BUCKET];
+struct prf_src_track_node_bucket {
+	struct prf_src_track_node	node[SRC_TRACK_PRF_KEYS_PER_BUCKET];
 } __rte_cache_aligned;
 
 struct src_track_hash {
 	struct src_track_key_bucket	key_bucket[SRC_TRACK_HASH_SIZE];
-	struct src_track_node_bucket	node_bucket[SRC_TRACK_HASH_SIZE];
+	struct prf_src_track_node_bucket	node_bucket[SRC_TRACK_HASH_SIZE];
 } __rte_cache_aligned;
 
 

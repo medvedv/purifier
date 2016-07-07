@@ -248,9 +248,9 @@ static void
 dump_states(struct cmdline *cl)
 {
 	int i, j, k;
-	struct conn_tuple tuple;
+	struct prf_conn_tuple tuple;
 	uint64_t timer, ttl_time;
-	struct tcp_conn tcp_conn;
+	struct prf_tcp_conn prf_tcp_conn;
 	char tcp_state[TCP_STATE_NAME_MAX];
 
 	RTE_LCORE_FOREACH_SLAVE(i) {
@@ -258,15 +258,15 @@ dump_states(struct cmdline *cl)
 			continue;
 		for (j = 0; j < PRF_TCP_CONN_HASH_SIZE; j++) {
 			for (k = 0; k < PRF_KEYS_PER_BUCKET; k++) {
-				if (prf_lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k].src_addr == 0)
+				if (prf_lcore_conf[i].tcp_hash->prf_tcp_key_bucket[j].key[k].src_addr == 0)
 					continue;
-				memcpy((uint8_t *)&tuple, (uint8_t *)&prf_lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k], sizeof(struct conn_tuple));
-				memcpy((uint8_t *)&tcp_conn, (uint8_t *)&prf_lcore_conf[i].tcp_hash->tcp_conn_bucket[j].tcp_conn[k], sizeof(struct tcp_conn));
-				timer = prf_lcore_conf[i].tcp_hash->timer_bucket[j].idle_timer[k];
+				memcpy((uint8_t *)&tuple, (uint8_t *)&prf_lcore_conf[i].tcp_hash->prf_tcp_key_bucket[j].key[k], sizeof(struct prf_conn_tuple));
+				memcpy((uint8_t *)&prf_tcp_conn, (uint8_t *)&prf_lcore_conf[i].tcp_hash->prf_tcp_conn_bucket[j].prf_tcp_conn[k], sizeof(struct prf_tcp_conn));
+				timer = prf_lcore_conf[i].tcp_hash->prf_timer_bucket[j].idle_timer[k];
 				rte_wmb();
-				if ((prf_lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k].src_addr == 0) || (timer <= prf_lcore_conf[i].timer))
+				if ((prf_lcore_conf[i].tcp_hash->prf_tcp_key_bucket[j].key[k].src_addr == 0) || (timer <= prf_lcore_conf[i].timer))
 					continue;
-				switch (tcp_conn.state) {
+				switch (prf_tcp_conn.state) {
 				case PRF_TCP_IV:
 					snprintf(tcp_state, sizeof(tcp_state), "PRF_TCP_STATE_NONE");
 					break;
@@ -302,7 +302,7 @@ dump_states(struct cmdline *cl)
 							" Dst ip " NIPQUAD_FMT
 							" Src port %u Dst port %u"
 							" TTL %"PRIu64"\t\n",
-							tcp_conn.dir[0].packets + tcp_conn.dir[1].packets, tcp_conn.dir[0].bytes + tcp_conn.dir[1].bytes,
+							prf_tcp_conn.dir[0].packets + prf_tcp_conn.dir[1].packets, prf_tcp_conn.dir[0].bytes + prf_tcp_conn.dir[1].bytes,
 							tcp_state,
 							NIPQUAD(tuple.src_addr),
 							NIPQUAD(tuple.dst_addr),

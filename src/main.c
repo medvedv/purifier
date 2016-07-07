@@ -442,7 +442,7 @@ worker_main_loop(void)
 
 		diff_gc_tsc = cur_tsc - prev_gc_tsc;
 		if (unlikely(diff_gc_tsc > gc_int_tsc)) {
-			ipv4_tcp_garbage_collect(conf, cur_tsc);
+			prf_ipv4_tcp_garbage_collect(conf, cur_tsc);
 			prev_gc_tsc = cur_tsc;
 		}
 
@@ -472,7 +472,7 @@ worker_main_loop(void)
 			}
 
 			nb_rx = tcp_sanity_check(pkts_burst, tcp_seg_arr, nb_rx, conf);
-			nb_rx = ipv4_tcp_conn_lookup_burst(conf, tcp_seg_arr,
+			nb_rx = prf_ipv4_tcp_conn_lookup_burst(conf, tcp_seg_arr,
 					pkts_burst, nb_rx, cur_tsc);
 			for (j = 0; j < nb_rx; j++) {
 				acl_p[j] = MBUF_IPV4_2PROTO(pkts_burst[j]);
@@ -662,11 +662,11 @@ MAIN(int argc, char **argv)
 		rte_exit(EXIT_FAILURE, "Cannot init mbuf pool\n");
 
 	prf_tcp_ent_pool = rte_mempool_create("prf_tcp_ent_pool", PRF_NB_TCP_ENT,
-					sizeof(struct tcp_ent), 32,
+					sizeof(struct prf_tcp_ent), 32,
 					0, NULL, NULL, NULL, NULL, PRF_SOCKET0, 0);
 
 	if (prf_tcp_ent_pool == NULL)
-		rte_exit(EXIT_FAILURE, "Cannot init tcp_ent pool\n");
+		rte_exit(EXIT_FAILURE, "Cannot init prf_tcp_ent pool\n");
 
 	prf_src_track_pool = rte_mempool_create("prf_src_track_pool", NB_SRC_TRACK_ENT,
 					sizeof(struct src_track_ent), 32,
@@ -678,7 +678,7 @@ MAIN(int argc, char **argv)
 	RTE_LCORE_FOREACH_SLAVE(i) {
 		if (i == prf_primarycore_id)
 			continue;
-		prf_lcore_conf[i].tcp_hash = ipv4_tcp_hash_init(i);
+		prf_lcore_conf[i].tcp_hash = prf_ipv4_tcp_hash_init(i);
 		if (prf_lcore_conf[i].tcp_hash == NULL)
 			rte_exit(EXIT_FAILURE, "TCP_hash_create on core %d failed\n", i);
 		printf("Init TCP_Hash on core %d\n", i);

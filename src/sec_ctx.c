@@ -49,7 +49,7 @@ uint32_t embrionic_threshold;
 uint32_t syn_proxy_secret[2];
 
 uint8_t
-compress_opt(struct tcpopts *options)
+compress_opt(struct prf_tcpopts *options)
 {
 	uint8_t data;
 	uint16_t mss = options->mss;
@@ -104,7 +104,7 @@ synproxy_cookie(uint32_t cookie, uint32_t saddr, uint32_t daddr,
 
 inline int
 synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th,
-			uint32_t time_min, struct tcpopts *options)
+			uint32_t time_min, struct prf_tcpopts *options)
 {
 	uint32_t cookie = rte_be_to_cpu_32(th->recv_ack) - 1;
 	uint32_t seq = rte_be_to_cpu_32(th->sent_seq) - 1;
@@ -135,8 +135,8 @@ src_track_hash_init(unsigned lcore_id, int idx)
 }
 
 int
-src_track_node_add(struct src_track_hash *hash_table,
-		uint32_t key, struct src_track_node **node)
+prf_src_track_node_add(struct src_track_hash *hash_table,
+		uint32_t key, struct prf_src_track_node **node)
 {
 	int ret, i = 0;
 	uint32_t bucket;
@@ -174,7 +174,7 @@ src_track_node_add(struct src_track_hash *hash_table,
 }
 
 int
-src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
+prf_src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
 {
 	int i;
 	uint32_t bucket;
@@ -188,7 +188,7 @@ src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
 	for (i = 0; i < SRC_TRACK_PRF_KEYS_PER_BUCKET; i++) {
 		if (hash_table->key_bucket[bucket].key[i] == key) {
 			hash_table->key_bucket[bucket].key[i] = 0;
-			memset(&hash_table->node_bucket[bucket].node[i], 0, sizeof(struct src_track_node));
+			memset(&hash_table->node_bucket[bucket].node[i], 0, sizeof(struct prf_src_track_node));
 			return 0;
 		}
 	}
@@ -200,7 +200,7 @@ src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
 	if ((*head)->node.key == key) {
 		tmp = *head;
 		*head = (*head)->next;
-		memset(tmp, 0, sizeof(struct src_track_node));
+		memset(tmp, 0, sizeof(struct prf_src_track_node));
 		rte_mempool_mp_put(prf_src_track_pool, tmp);
 		return 0;
 	}
@@ -210,7 +210,7 @@ src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
 		if (cur->next->node.key == key) {
 			tmp = cur->next;
 			cur->next = tmp->next;
-			memset(tmp, 0, sizeof(struct src_track_node));
+			memset(tmp, 0, sizeof(struct prf_src_track_node));
 			rte_mempool_mp_put(prf_src_track_pool, tmp);
 			return 0;
 		}
@@ -220,8 +220,8 @@ src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
 }
 
 int
-src_track_node_lookup(struct src_track_hash *hash_table,
-			uint32_t key, struct src_track_node **node)
+prf_src_track_node_lookup(struct src_track_hash *hash_table,
+			uint32_t key, struct prf_src_track_node **node)
 {
 	int i;
 	uint32_t bucket;
@@ -247,7 +247,7 @@ src_track_node_lookup(struct src_track_hash *hash_table,
 }
 
 int
-src_track_rate_check(struct src_track_node *node,
+src_track_rate_check(struct prf_src_track_node *node,
 			struct sec_ctx_rule *rule, uint64_t time)
 {
 	uint64_t time_diff, n_periods;
@@ -269,7 +269,7 @@ src_track_rate_check(struct src_track_node *node,
 
 int
 src_track_checkout(struct sec_ctx_rule *rule, uint32_t key,
-			uint64_t time, struct src_track_node **node)
+			uint64_t time, struct prf_src_track_node **node)
 {
 	int ret;
 
@@ -287,10 +287,10 @@ src_track_checkout(struct sec_ctx_rule *rule, uint32_t key,
 			return 3;
 	}
 
-	ret = src_track_node_lookup(rule->hash_table, key, node);
+	ret = prf_src_track_node_lookup(rule->hash_table, key, node);
 
 	if (ret == -ENOENT) {
-		ret = src_track_node_add(rule->hash_table, key, node);
+		ret = prf_src_track_node_add(rule->hash_table, key, node);
 		if (ret < 0)
 			return ret;
 

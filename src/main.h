@@ -82,7 +82,7 @@ struct prf_mbuf_table {
 };
 
 struct prf_lcore_conf {
-	struct ipv4_tcp_hash    *tcp_hash;
+	struct prf_ipv4_tcp_hash    *tcp_hash;
 	uint64_t		timer;
 	uint32_t		bucket_pair_nb;
 	uint8_t			queue_id;
