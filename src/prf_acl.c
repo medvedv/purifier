@@ -37,7 +37,7 @@
 #include <rte_tcp.h>
 
 #include "prf_stateful.h"
-#include "acl.h"
+#include "prf_acl.h"
 #include "sec_ctx.h"
 #include "sec_ctx_api.h"
 #include "main.h"
@@ -86,22 +86,22 @@ static const struct rte_acl_field_def ipv4_defs[NUM_FIELDS_IPV4] = {
 	},
 };
 
-acl_callback_fn_t acl_callbacks[] = { acl_accept, acl_drop, acl_accept, acl_reject, acl_no_track, acl_sec_ctx};
+prf_acl_callback_fn_t prf_acl_callbacks[] = { prf_acl_accept, prf_acl_drop, prf_acl_accept, prf_acl_reject, prf_acl_no_track, prf_acl_sec_ctx};
 
 struct rte_acl_ctx *acl_ctx;
-int acl_version = 0;
+int prf_acl_version = 0;
 struct rte_acl_param acl_param;
 struct rte_acl_config acl_build_param;
 
 void
-acl_drop(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, __attribute__((unused)) uint64_t time)
+prf_acl_drop(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, __attribute__((unused)) uint64_t time)
 {
-	++conf->stats.acl_stat[(result >> ACL_RESULT_RULE_SHIFT) & ACL_RESULT_RULE_MASK];
+	++conf->stats.acl_stat[(result >> PRF_ACL_RESULT_RULE_SHIFT) & PRF_ACL_RESULT_RULE_MASK];
 	rte_pktmbuf_free(m);
 }
 
 void
-acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time)
+prf_acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time)
 {
 	struct rte_mbuf *oldmbuf = NULL;
 	struct ether_hdr *eth_hdr, *oldeth_hdr;
@@ -117,7 +117,7 @@ acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uin
 	uint16_t win, tmp_port;
 	uint8_t tcpflags, data;
 
-	++conf->stats.acl_stat[(result >> ACL_RESULT_RULE_SHIFT) & ACL_RESULT_RULE_MASK];
+	++conf->stats.acl_stat[(result >> PRF_ACL_RESULT_RULE_SHIFT) & PRF_ACL_RESULT_RULE_MASK];
 	eth_hdr		= rte_pktmbuf_mtod(m, struct ether_hdr *);
 	ip_hdr		= (struct ipv4_hdr *)(eth_hdr + 1);
 	tcp_hdr		= (struct tcp_hdr *)((unsigned char *) ip_hdr + (ip_hdr->version_ihl & 0xf)*4);
@@ -285,22 +285,22 @@ add_state:
 }
 
 void
-acl_reject(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, __attribute__((unused)) uint64_t time)
+prf_acl_reject(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, __attribute__((unused)) uint64_t time)
 {
 	/* for future implementation*/
-	++conf->stats.acl_stat[(result >> ACL_RESULT_RULE_SHIFT) & ACL_RESULT_RULE_MASK];
+	++conf->stats.acl_stat[(result >> PRF_ACL_RESULT_RULE_SHIFT) & PRF_ACL_RESULT_RULE_MASK];
 	rte_pktmbuf_free(m);
 }
 
 void
-acl_no_track(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, __attribute__((unused)) uint64_t time)
+prf_acl_no_track(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, __attribute__((unused)) uint64_t time)
 {
-	++conf->stats.acl_stat[(result >> ACL_RESULT_RULE_SHIFT) & ACL_RESULT_RULE_MASK];
+	++conf->stats.acl_stat[(result >> PRF_ACL_RESULT_RULE_SHIFT) & PRF_ACL_RESULT_RULE_MASK];
 	prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
 }
 
 void
-acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time)
+prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time)
 {
 	struct rte_mbuf *oldmbuf = NULL;
 	struct ether_hdr *eth_hdr, *oldeth_hdr;
@@ -318,8 +318,8 @@ acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, ui
 	uint16_t win, tmp_port;
 	uint8_t tcpflags, data;
 
-	++conf->stats.acl_stat[(result >> ACL_RESULT_RULE_SHIFT) & ACL_RESULT_RULE_MASK];
-	index = (result >> ACL_SEC_CTX_RESULT_SHIFT) & ACL_SEC_CTX_RESULT_MASK;
+	++conf->stats.acl_stat[(result >> PRF_ACL_RESULT_RULE_SHIFT) & PRF_ACL_RESULT_RULE_MASK];
+	index = (result >> PRF_ACL_SEC_CTX_RESULT_SHIFT) & PRF_ACL_SEC_CTX_RESULT_MASK;
 	if (unlikely(index >= PRF_SEC_CTX_MAX_RULES)) {
 		rte_pktmbuf_free(m);
 		return;
@@ -554,24 +554,24 @@ add_state:
 }
 
 void
-init_acl_config(void)
+prf_init_acl_config(void)
 {
 	acl_param.socket_id		= PRF_SOCKET0;
 	acl_param.rule_size		= RTE_ACL_RULE_SZ(RTE_DIM(ipv4_defs));
-	acl_param.max_rule_num		= ACL_MAX_RULES;
-	acl_build_param.num_categories	= DEFAULT_MAX_CATEGORIES;
+	acl_param.max_rule_num		= PRF_ACL_MAX_RULES;
+	acl_build_param.num_categories	= PRF_DEFAULT_MAX_CATEGORIES;
 	acl_build_param.num_fields	= RTE_DIM(ipv4_defs);
 	memcpy(&acl_build_param.defs, ipv4_defs, sizeof(ipv4_defs));
 }
 
 int
-acl_create(struct rte_acl_rule *acl_rules, int acl_num, struct rte_acl_ctx **ctx)
+prf_acl_create(struct rte_acl_rule *acl_rules, int acl_num, struct rte_acl_ctx **ctx)
 {
 	int ret = 0;
-	char name[ACL_NAME];
+	char name[PRF_PRF_ACL_NAME];
 
-	acl_version++;
-	snprintf(name, sizeof(name), "acl_%d", acl_version);
+	prf_acl_version++;
+	snprintf(name, sizeof(name), "acl_%d", prf_acl_version);
 
 	acl_param.name = name;
 	*ctx = rte_acl_create(&acl_param);
@@ -594,14 +594,14 @@ acl_create(struct rte_acl_rule *acl_rules, int acl_num, struct rte_acl_ctx **ctx
 }
 
 void
-build_empty_acl(struct rte_acl_ctx **ctx)
+prf_build_empty_acl(struct rte_acl_ctx **ctx)
 {
 	int ret;
 	struct acl4_rule *rules = rte_calloc(NULL, 1, sizeof(struct acl4_rule), 0);
 
 	rules->data.category_mask = 1;
 	rules->data.priority = RTE_ACL_MAX_PRIORITY - 1;
-	rules->data.userdata = 1 << (ACL_RESULT_RULE_SHIFT + ACL_MAX_RULES_BITS);
+	rules->data.userdata = 1 << (PRF_ACL_RESULT_RULE_SHIFT + PRF_ACL_MAX_RULES_BITS);
 	rules->field[PROTO_FIELD_IPV4].value.u8       = IPPROTO_TCP;
 	rules->field[PROTO_FIELD_IPV4].mask_range.u8  = 0xff;
 	rules->field[SRC_FIELD_IPV4].value.u32        = IPv4(0, 0, 0, 0);
@@ -613,7 +613,7 @@ build_empty_acl(struct rte_acl_ctx **ctx)
 	rules->field[DSTP_FIELD_IPV4].value.u16       = 0;
 	rules->field[DSTP_FIELD_IPV4].mask_range.u16  = 65535;
 
-	ret = acl_create((struct rte_acl_rule *)rules, 1, ctx);
+	ret = prf_acl_create((struct rte_acl_rule *)rules, 1, ctx);
 	if (ret != 0)
 		rte_exit(EXIT_FAILURE, "Failed to create ACL context\n");
 	rte_free(rules);
