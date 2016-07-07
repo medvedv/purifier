@@ -69,12 +69,12 @@
 #include <cmdline_socket.h>
 #include <cmdline.h>
 
+#include "prf_csum.h"
+#include "prf_cmdline.h"
 #include "prf_stateful.h"
 #include "prf_acl.h"
 #include "prf_sec_ctx.h"
 #include "main.h"
-#include "prf_csum.h"
-#include "cmdline.h"
 
 #define MAX_LCORES 8
 #define MIN_LCORES 3

@@ -48,7 +48,7 @@ SRCS-y := main.c
 SRCS-y += prf_stateful.c
 SRCS-y += prf_sec_ctx.c
 SRCS-y += prf_acl.c
-SRCS-y += cmdline.c
+SRCS-y += prf_cmdline.c
 
 CFLAGS += -O3
 CFLAGS += $(WERROR_FLAGS)
