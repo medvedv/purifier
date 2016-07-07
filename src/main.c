@@ -71,7 +71,7 @@
 
 #include "prf_stateful.h"
 #include "prf_acl.h"
-#include "sec_ctx.h"
+#include "prf_sec_ctx.h"
 #include "main.h"
 #include "prf_csum.h"
 #include "cmdline.h"
@@ -668,8 +668,8 @@ MAIN(int argc, char **argv)
 	if (prf_tcp_ent_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init prf_tcp_ent pool\n");
 
-	prf_src_track_pool = rte_mempool_create("prf_src_track_pool", NB_SRC_TRACK_ENT,
-					sizeof(struct src_track_ent), 32,
+	prf_src_track_pool = rte_mempool_create("prf_src_track_pool", PRF_NB_SRC_TRACK_ENT,
+					sizeof(struct prf_src_track_ent), 32,
 					0, NULL, NULL, NULL, NULL, PRF_SOCKET0, 0);
 
 	if (prf_src_track_pool == NULL)
@@ -688,10 +688,10 @@ MAIN(int argc, char **argv)
 
 	prf_dst_ports[0] = 1;
 	prf_dst_ports[1] = 0;
-	syn_proxy_secret[0] = (uint32_t)rte_rand();
-	syn_proxy_secret[1] = (uint32_t)rte_rand();
+	prf_syn_proxy_secret[0] = (uint32_t)rte_rand();
+	prf_syn_proxy_secret[1] = (uint32_t)rte_rand();
 	prf_tsc_hz = rte_get_tsc_hz();
-	embrionic_threshold = 2000;
+	prf_embrionic_threshold = 2000;
 
 	poll_tsc = (prf_tsc_hz + US_PER_S - 1) / (US_PER_S * prf_nb_worker_cores) * RX_POLL_US;
 	printf("Poll TSC %"PRIu64"\n", poll_tsc);

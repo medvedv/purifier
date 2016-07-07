@@ -46,7 +46,7 @@ APP = purifier
 # all source are stored in SRCS-y
 SRCS-y := main.c
 SRCS-y += prf_stateful.c
-SRCS-y += sec_ctx.c
+SRCS-y += prf_sec_ctx.c
 SRCS-y += prf_acl.c
 SRCS-y += cmdline.c
 

@@ -31,36 +31,36 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SEC_CTX_API_H_
-#define _SEC_CTX_API_H_
+#ifndef _PRF_SEC_CTX_API_H_
+#define _PRF_SEC_CTX_API_H_
 
 struct prf_tcpopts;
 
-uint8_t compress_opt(struct prf_tcpopts *options);
+uint8_t prf_compress_opt(struct prf_tcpopts *options);
 
-uint32_t synproxy_hash(uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, uint32_t count, int c);
+uint32_t prf_synproxy_hash(uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, uint32_t count, int c);
 
-uint32_t synproxy_cookie_get(uint32_t saddr, uint32_t daddr, uint16_t sport,
+uint32_t prf_synproxy_cookie_get(uint32_t saddr, uint32_t daddr, uint16_t sport,
 					uint32_t dport, uint32_t sseq, uint32_t count, uint32_t data);
 
-int synproxy_cookie(uint32_t cookie, uint32_t saddr, uint32_t daddr,
+int prf_synproxy_cookie(uint32_t cookie, uint32_t saddr, uint32_t daddr,
 				uint16_t sport, uint16_t dport, uint32_t sseq,
 				uint32_t count, uint32_t maxdiff);
 
-inline int synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th, uint32_t time_min, struct prf_tcpopts *options);
+inline int prf_synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th, uint32_t time_min, struct prf_tcpopts *options);
 
-int prf_src_track_node_add(struct src_track_hash *hash_table, uint32_t key, struct prf_src_track_node **node);
+int prf_src_track_node_add(struct prf_src_track_hash *hash_table, uint32_t key, struct prf_src_track_node **node);
 
-int prf_src_track_node_del(struct src_track_hash *hash_table, uint32_t key);
+int prf_src_track_node_del(struct prf_src_track_hash *hash_table, uint32_t key);
 
-int prf_src_track_node_lookup(struct src_track_hash *hash_table, uint32_t key, struct prf_src_track_node **node);
+int prf_src_track_node_lookup(struct prf_src_track_hash *hash_table, uint32_t key, struct prf_src_track_node **node);
 
-int src_track_rate_check(struct prf_src_track_node *node, struct sec_ctx_rule *rule, uint64_t time);
+int prf_src_track_rate_check(struct prf_src_track_node *node, struct prf_sec_ctx_rule *rule, uint64_t time);
 
-int src_track_checkout(struct sec_ctx_rule *rule, uint32_t key, uint64_t time, struct prf_src_track_node **node);
+int prf_src_track_checkout(struct prf_sec_ctx_rule *rule, uint32_t key, uint64_t time, struct prf_src_track_node **node);
 
-int ipset_lookup(struct ipset_hash *hash, uint32_t key, uint64_t time);
+int prf_ipset_lookup(struct prf_ipset_hash *hash, uint32_t key, uint64_t time);
 
-int ipset_add(struct ipset_hash *hash, uint32_t key, uint64_t time);
+int prf_ipset_add(struct prf_ipset_hash *hash, uint32_t key, uint64_t time);
 
-#endif
+#endif /* _PRF_SEC_CTX_API_H_ */

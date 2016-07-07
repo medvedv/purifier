@@ -31,57 +31,57 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SEC_CTX_H_
-#define _SEC_CTX_H_
+#ifndef _PRF_SEC_CTX_H_
+#define _PRF_SEC_CTX_H_
 
-#define COOKIEBITS			24
-#define COOKIEMASK			(((uint32_t)1 << COOKIEBITS) - 1)
-#define MAX_SYNPROXY_MBUF_CHAIN		4
+#define PRF_COOKIEBITS				24
+#define PRF_COOKIEMASK				(((uint32_t)1 << PRF_COOKIEBITS) - 1)
+#define PRF_MAX_SYNPROXY_MBUF_CHAIN		4
 
-#define SRC_TRACK_HASH_SIZE		(1 << 16) /* 128Mb for 2^18 buckets */
-#define SRC_TRACK_HASH_MASK		((SRC_TRACK_HASH_SIZE) - 1)
-#define SRC_TRACK_PRF_KEYS_PER_BUCKET	14
-#define NB_SRC_TRACK_ENT		131071
+#define PRF_SRC_TRACK_HASH_SIZE			(1 << 16) /* 128Mb for 2^18 buckets */
+#define PRF_SRC_TRACK_HASH_MASK			((PRF_SRC_TRACK_HASH_SIZE) - 1)
+#define PRF_SRC_TRACK_PRF_KEYS_PER_BUCKET	14
+#define PRF_NB_SRC_TRACK_ENT			131071
 
-#define NB_IPSET_KEYS			16
-#define IPSET_HASH_SIZE			(1 << 12) /* 12.6 Mb for 2^12 buckets */
-#define IPSET_HASH_MASK			((IPSET_HASH_SIZE) - 1)
-#define IPSET_UPDATE_TIMER		1
-#define IPSET_WHITE_LIST_DEF_TIMER	604800	/* 1 week*/
-#define IPSET_BLACK_LIST_DEF_TIMER	3600	/* 1 hour*/
+#define PRF_NB_IPSET_KEYS			16
+#define PRF_IPSET_HASH_SIZE			(1 << 12) /* 12.6 Mb for 2^12 buckets */
+#define PRF_IPSET_HASH_MASK			((PRF_IPSET_HASH_SIZE) - 1)
+#define PRF_IPSET_UPDATE_TIMER			1
+#define PRF_IPSET_WL_DEF_TIMER			604800	/* 1 week*/
+#define PRF_IPSET_BL_DEF_TIMER			3600	/* 1 hour*/
 
 
-#define TCP_STATE_SYNPROXY_INIT		(1 << 14)
-#define TCP_STATE_SYNPROXY		(1 << 15)
+#define PRF_TCP_STATE_SYNPROXY_INIT		(1 << 14)
+#define PRF_TCP_STATE_SYNPROXY			(1 << 15)
 
 /* src_track flags defines */
-#define SRC_TRACK_CONN_FLAG		0x1
-#define SRC_TRACK_RATE_FLAG		0x2
-#define SYN_PROXY_SACK_PERM		0x4
-#define SYN_PROXY_WSCALE_PERM		0x8
-#define WHITE_LIST_CHECK		0x10
-#define BLACK_LIST_CHECK		0x20
-#define SRC_TRACK_BAN			0x40
-#define HTTP_CHECK			0x80
+#define PRF_SRC_TRACK_CONN_FLAG			0x1
+#define PRF_SRC_TRACK_RATE_FLAG			0x2
+#define PRF_SYN_PROXY_SACK_PERM			0x4
+#define PRF_SYN_PROXY_WSCALE_PERM		0x8
+#define PRF_WHITE_LIST_CHECK			0x10
+#define PRF_BLACK_LIST_CHECK			0x20
+#define PRF_SRC_TRACK_BAN			0x40
+#define PRF_HTTP_CHECK				0x80
 
-#define DEFAULT_MSS			536
-#define MAX_TCP_WINDOW			32767
+#define PRF_DEFAULT_MSS				536
+#define PRF_MAX_TCP_WINDOW			32767
 
 struct prf_lcore_conf;
 
-extern uint32_t embrionic_threshold;
-extern uint32_t syn_proxy_secret[2];
+extern uint32_t prf_embrionic_threshold;
+extern uint32_t prf_syn_proxy_secret[2];
 
-static const uint16_t msstab[] = {
+static const uint16_t prf_msstab[] = {
 	536,
 	1024,
 	1436,
 	1460
 };
 
-struct src_track_hash;
+struct prf_src_track_hash;
 
-struct sec_ctx_rule {
+struct prf_sec_ctx_rule {
 	rte_atomic64_t		ref_cnt;
 	uint64_t		bucket_size;		/* for src rate tracking */
 	uint64_t		period;			/* for src rate tracking */
@@ -89,9 +89,9 @@ struct sec_ctx_rule {
 	uint16_t		syn_proxy_mss;		/* protected server MSS */
 	uint8_t			syn_proxy_wscale;	/* protected server wscale factor */
 	uint8_t			flags;			/* conn and/or rate flags */
-	struct src_track_hash	*hash_table;
-	struct ipset_hash	*white_list;
-	struct ipset_hash	*black_list;
+	struct prf_src_track_hash	*hash_table;
+	struct prf_ipset_hash	*white_list;
+	struct prf_ipset_hash	*black_list;
 } __rte_cache_aligned;
 
 struct prf_src_track_node {
@@ -99,42 +99,42 @@ struct prf_src_track_node {
 	uint32_t		counter;
 	uint64_t		time;
 	uint64_t		bucket;
-	struct sec_ctx_rule	*rule;
+	struct prf_sec_ctx_rule	*rule;
 };
 
-struct src_track_ent {
-	struct src_track_ent	*next;
+struct prf_src_track_ent {
+	struct prf_src_track_ent	*next;
 	struct prf_src_track_node	node;
 } __rte_cache_aligned;
 
-struct src_track_key_bucket {
-	uint32_t		key[SRC_TRACK_PRF_KEYS_PER_BUCKET];
-	struct src_track_ent	*head;
+struct prf_src_track_key_bucket {
+	uint32_t			key[PRF_SRC_TRACK_PRF_KEYS_PER_BUCKET];
+	struct prf_src_track_ent	*head;
 } __rte_cache_aligned;
 
 struct prf_src_track_node_bucket {
-	struct prf_src_track_node	node[SRC_TRACK_PRF_KEYS_PER_BUCKET];
+	struct prf_src_track_node	node[PRF_SRC_TRACK_PRF_KEYS_PER_BUCKET];
 } __rte_cache_aligned;
 
-struct src_track_hash {
-	struct src_track_key_bucket	key_bucket[SRC_TRACK_HASH_SIZE];
-	struct prf_src_track_node_bucket	node_bucket[SRC_TRACK_HASH_SIZE];
+struct prf_src_track_hash {
+	struct prf_src_track_key_bucket		key_bucket[PRF_SRC_TRACK_HASH_SIZE];
+	struct prf_src_track_node_bucket	node_bucket[PRF_SRC_TRACK_HASH_SIZE];
 } __rte_cache_aligned;
 
 
-struct ipset_bucket {
-	uint32_t	key[NB_IPSET_KEYS];
-	uint64_t	timer[NB_IPSET_KEYS];
+struct prf_ipset_bucket {
+	uint32_t	key[PRF_NB_IPSET_KEYS];
+	uint64_t	timer[PRF_NB_IPSET_KEYS];
 } __rte_cache_aligned;
 
-struct ipset_hash {
+struct prf_ipset_hash {
 	uint64_t		ban_timer;
 	uint64_t		flags;
-	struct ipset_bucket	bucket[IPSET_HASH_SIZE];
+	struct prf_ipset_bucket	bucket[PRF_IPSET_HASH_SIZE];
 };
 
-struct src_track_hash *src_track_hash_init(unsigned lcore_id, int idx);
+struct prf_src_track_hash *prf_src_track_hash_init(unsigned lcore_id, int idx);
 
-struct ipset_hash *ipset_hash_init(unsigned lcore_id, int idx);
+struct prf_ipset_hash *prf_ipset_hash_init(unsigned lcore_id, int idx);
 
-#endif
+#endif /* _PRF_SEC_CTX_H_ */

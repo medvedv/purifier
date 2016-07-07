@@ -38,8 +38,8 @@
 
 #include "prf_stateful.h"
 #include "prf_acl.h"
-#include "sec_ctx.h"
-#include "sec_ctx_api.h"
+#include "prf_sec_ctx.h"
+#include "prf_sec_ctx_api.h"
 #include "main.h"
 #include "prf_csum.h"
 
@@ -130,7 +130,7 @@ prf_acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf,
 
 	/* Maybe remove (tcplen != 0) in case retransmit syn to backend*/
 	if (unlikely((tcpflags != PRF_TCPHDR_SYN) || (tcplen != 0))) {
-		if ((tcpflags != PRF_TCPHDR_ACK) || (tcplen != 0) || (synproxy_cookie_check(ip_hdr, tcp_hdr, time / (prf_tsc_hz * 60), &prf_tcpopts))) {
+		if ((tcpflags != PRF_TCPHDR_ACK) || (tcplen != 0) || (prf_synproxy_cookie_check(ip_hdr, tcp_hdr, time / (prf_tsc_hz * 60), &prf_tcpopts))) {
 			++conf->stats.state_mismatch;
 			rte_pktmbuf_free(m);
 			return;
@@ -198,7 +198,7 @@ prf_acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf,
 		return;
 	}
 
-	if (conf->stats.embrionic_counter >= embrionic_threshold) {
+	if (conf->stats.embrionic_counter >= prf_embrionic_threshold) {
 		if (prf_tcpopts.mss != 0)
 			optlen = 4;
 		prf_tcpopts.wscale = 0xf;
@@ -226,13 +226,13 @@ prf_acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf,
 		tcp_hdr->data_off	= (sizeof(struct tcp_hdr) + optlen) << 2;
 
 		if (prf_tcpopts.mss) {
-			data = compress_opt(&prf_tcpopts);
-			tcp_hdr->sent_seq = rte_cpu_to_be_32(synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
+			data = prf_compress_opt(&prf_tcpopts);
+			tcp_hdr->sent_seq = rte_cpu_to_be_32(prf_synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
 						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (prf_tsc_hz * 60), data));
 		} else {
-			prf_tcpopts.mss = DEFAULT_MSS;
-			data = compress_opt(&prf_tcpopts);
-			tcp_hdr->sent_seq = rte_cpu_to_be_32(synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
+			prf_tcpopts.mss = PRF_DEFAULT_MSS;
+			data = prf_compress_opt(&prf_tcpopts);
+			tcp_hdr->sent_seq = rte_cpu_to_be_32(prf_synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
 						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (prf_tsc_hz * 60), data));
 			prf_tcpopts.mss = 0;
 		}
@@ -241,7 +241,7 @@ prf_acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf,
 		if (prf_tcpopts.mss) {
 			*tcp_opt        = PRF_TCPOPT_MSS;
 			*(tcp_opt + 1)  = PRF_TCPOLEN_MSS;
-			*(uint16_t *)(tcp_opt + 2) = rte_cpu_to_be_16(msstab[data & 0x3]);
+			*(uint16_t *)(tcp_opt + 2) = rte_cpu_to_be_16(prf_msstab[data & 0x3]);
 		}
 
 		m->pkt.data_len = m->pkt.pkt_len = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct tcp_hdr) + optlen;
@@ -269,7 +269,7 @@ add_state:
 		oldmbuf->metadata64[0]	= 0;
 		prf_tcp_conn->m		= oldmbuf;
 		prf_tcp_conn->seq_diff	= rte_be_to_cpu_32(oldtcp_hdr->recv_ack) - 1;
-		prf_tcp_conn->flags         |= TCP_STATE_SYNPROXY_INIT|TCP_STATE_SYNPROXY;
+		prf_tcp_conn->flags         |= PRF_TCP_STATE_SYNPROXY_INIT|PRF_TCP_STATE_SYNPROXY;
 	}
 
 	prf_tcp_conn->dir[0].td_maxend =
@@ -308,7 +308,7 @@ prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf
 	struct tcp_hdr  *tcp_hdr, *oldtcp_hdr;
 	uint64_t *timer = NULL;
 	struct prf_tcp_conn *prf_tcp_conn = NULL;
-	struct sec_ctx_rule *rule;
+	struct prf_sec_ctx_rule *rule;
 	struct prf_src_track_node *node;
 	char *tcp_opt;
 	struct prf_tcpopts prf_tcpopts;
@@ -337,14 +337,14 @@ prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf
 	win = rte_be_to_cpu_16(tcp_hdr->rx_win);
 
 	if (unlikely((tcpflags != PRF_TCPHDR_SYN) || (tcplen != 0))) {
-		if ((tcpflags != PRF_TCPHDR_ACK) || (tcplen != 0) || (synproxy_cookie_check(ip_hdr, tcp_hdr, time / (prf_tsc_hz * 60), &prf_tcpopts))) {
+		if ((tcpflags != PRF_TCPHDR_ACK) || (tcplen != 0) || (prf_synproxy_cookie_check(ip_hdr, tcp_hdr, time / (prf_tsc_hz * 60), &prf_tcpopts))) {
 			++conf->stats.state_mismatch;
 			rte_pktmbuf_free(m);
 			return;
 		}
 		if (unlikely((prf_tcpopts.mss > rule->syn_proxy_mss) ||
-				((prf_tcpopts.wscale != 0xf) && (!(rule->flags & SYN_PROXY_WSCALE_PERM))) ||
-				(prf_tcpopts.sackok && (!(rule->flags & SYN_PROXY_SACK_PERM))))) {
+				((prf_tcpopts.wscale != 0xf) && (!(rule->flags & PRF_SYN_PROXY_WSCALE_PERM))) ||
+				(prf_tcpopts.sackok && (!(rule->flags & PRF_SYN_PROXY_SACK_PERM))))) {
 			++conf->stats.state_mismatch;
 			rte_pktmbuf_free(m);
 			return;
@@ -430,11 +430,11 @@ prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf
 		return;
 	}
 
-	if (conf->stats.embrionic_counter >= embrionic_threshold) {
+	if (conf->stats.embrionic_counter >= prf_embrionic_threshold) {
 		prf_tcpopts.mss = RTE_MIN(prf_tcpopts.mss, rule->syn_proxy_mss);
-		if (!(rule->flags & SYN_PROXY_WSCALE_PERM))
+		if (!(rule->flags & PRF_SYN_PROXY_WSCALE_PERM))
 			prf_tcpopts.wscale = 0xf;
-		if (!(rule->flags & SYN_PROXY_SACK_PERM))
+		if (!(rule->flags & PRF_SYN_PROXY_SACK_PERM))
 			prf_tcpopts.sackok = 0;
 		if (prf_tcpopts.mss)
 			optlen += 4;
@@ -465,13 +465,13 @@ prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf
 		tcp_hdr->data_off	= (sizeof(struct tcp_hdr) + optlen) << 2;
 
 		if (prf_tcpopts.mss) {
-			data = compress_opt(&prf_tcpopts);
-			tcp_hdr->sent_seq = rte_cpu_to_be_32(synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
+			data = prf_compress_opt(&prf_tcpopts);
+			tcp_hdr->sent_seq = rte_cpu_to_be_32(prf_synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
 						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (prf_tsc_hz * 60), data));
 		} else {
-			prf_tcpopts.mss = DEFAULT_MSS;
-			data = compress_opt(&prf_tcpopts);
-			tcp_hdr->sent_seq = rte_cpu_to_be_32(synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
+			prf_tcpopts.mss = PRF_DEFAULT_MSS;
+			data = prf_compress_opt(&prf_tcpopts);
+			tcp_hdr->sent_seq = rte_cpu_to_be_32(prf_synproxy_cookie_get(ip_hdr->dst_addr, ip_hdr->src_addr,
 						tcp_hdr->dst_port, tcp_hdr->src_port, rte_be_to_cpu_32(tcp_hdr->sent_seq), time / (prf_tsc_hz * 60), data));
 			prf_tcpopts.mss = 0;
 		}
@@ -480,7 +480,7 @@ prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf
 		if (prf_tcpopts.mss) {
 			*tcp_opt	= PRF_TCPOPT_MSS;
 			*(tcp_opt + 1)	= PRF_TCPOLEN_MSS;
-			*(uint16_t *)(tcp_opt + 2) = rte_cpu_to_be_16(msstab[data & 0x3]);
+			*(uint16_t *)(tcp_opt + 2) = rte_cpu_to_be_16(prf_msstab[data & 0x3]);
 			tcp_opt += 4;
 		}
 		if (!(prf_tcpopts.wscale == 0xf)) {
@@ -505,7 +505,7 @@ prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf
 		return;
 	}
 add_state:
-	ret = src_track_checkout(rule, rte_be_to_cpu_32(ip_hdr->src_addr), time, &node);
+	ret = prf_src_track_checkout(rule, rte_be_to_cpu_32(ip_hdr->src_addr), time, &node);
 
 	/* add switch case statement for handling different non zero return causes (rate|max_conn|black_list) */
 	if (ret != 0) {
@@ -536,7 +536,7 @@ add_state:
 		oldmbuf->metadata64[0]	= 0;
 		prf_tcp_conn->m		= oldmbuf;
 		prf_tcp_conn->seq_diff	= rte_be_to_cpu_32(oldtcp_hdr->recv_ack) - 1;
-		prf_tcp_conn->flags         |= TCP_STATE_SYNPROXY_INIT|TCP_STATE_SYNPROXY;
+		prf_tcp_conn->flags         |= PRF_TCP_STATE_SYNPROXY_INIT|PRF_TCP_STATE_SYNPROXY;
 	}
 
 	if (prf_tcpopts.wscale != 0xf)
@@ -568,7 +568,7 @@ int
 prf_acl_create(struct rte_acl_rule *acl_rules, int acl_num, struct rte_acl_ctx **ctx)
 {
 	int ret = 0;
-	char name[PRF_PRF_ACL_NAME];
+	char name[PRF_ACL_NAME];
 
 	prf_acl_version++;
 	snprintf(name, sizeof(name), "acl_%d", prf_acl_version);

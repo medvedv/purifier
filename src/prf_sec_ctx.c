@@ -41,21 +41,21 @@
 
 #include "prf_stateful.h"
 #include "prf_acl.h"
-#include "sec_ctx.h"
-#include "sec_ctx_api.h"
+#include "prf_sec_ctx.h"
+#include "prf_sec_ctx_api.h"
 #include "main.h"
 
-uint32_t embrionic_threshold;
-uint32_t syn_proxy_secret[2];
+uint32_t prf_embrionic_threshold;
+uint32_t prf_syn_proxy_secret[2];
 
 uint8_t
-compress_opt(struct prf_tcpopts *options)
+prf_compress_opt(struct prf_tcpopts *options)
 {
 	uint8_t data;
 	uint16_t mss = options->mss;
 
-	for (data = PRF_ARRAY_SIZE(msstab) - 1; data ; data--)
-		if (mss >= msstab[data])
+	for (data = PRF_ARRAY_SIZE(prf_msstab) - 1; data ; data--)
+		if (mss >= prf_msstab[data])
 			break;
 	data += (options->wscale<<2);
 	data += (options->sackok<<6);
@@ -63,7 +63,7 @@ compress_opt(struct prf_tcpopts *options)
 }
 
 uint32_t
-synproxy_hash(uint32_t saddr, uint32_t daddr, uint16_t sport,
+prf_synproxy_hash(uint32_t saddr, uint32_t daddr, uint16_t sport,
 		uint16_t dport, uint32_t count, int c)
 {
 	uint32_t tmp[4];
@@ -72,48 +72,48 @@ synproxy_hash(uint32_t saddr, uint32_t daddr, uint16_t sport,
 	tmp[1] = daddr;
 	tmp[2] = ((uint32_t)sport << 16) | dport;
 	tmp[3] = count;
-	return rte_jhash(&tmp, 4, syn_proxy_secret[c]);
+	return rte_jhash(&tmp, 4, prf_syn_proxy_secret[c]);
 }
 
 uint32_t
-synproxy_cookie_get(uint32_t saddr, uint32_t daddr,
+prf_synproxy_cookie_get(uint32_t saddr, uint32_t daddr,
 			uint16_t sport,	uint32_t dport, uint32_t sseq,
 			uint32_t count, uint32_t data)
 {
-	return (synproxy_hash(saddr, daddr, sport, dport, 0, 0) +
-		sseq + (count << COOKIEBITS) +
-		((synproxy_hash(saddr, daddr, sport, dport, count, 1) + data)
-		& COOKIEMASK));
+	return (prf_synproxy_hash(saddr, daddr, sport, dport, 0, 0) +
+		sseq + (count << PRF_COOKIEBITS) +
+		((prf_synproxy_hash(saddr, daddr, sport, dport, count, 1) + data)
+		& PRF_COOKIEMASK));
 }
 
 int
-synproxy_cookie(uint32_t cookie, uint32_t saddr, uint32_t daddr,
+prf_synproxy_cookie(uint32_t cookie, uint32_t saddr, uint32_t daddr,
 		uint16_t sport, uint16_t dport, uint32_t sseq,
 		uint32_t count, uint32_t maxdiff)
 {
 	uint32_t diff;
 
-	cookie -= synproxy_hash(saddr, daddr, sport, dport, 0, 0) + sseq;
+	cookie -= prf_synproxy_hash(saddr, daddr, sport, dport, 0, 0) + sseq;
 
-	diff = (count - (cookie >> COOKIEBITS)) & ((uint32_t)-1 >> COOKIEBITS);
+	diff = (count - (cookie >> PRF_COOKIEBITS)) & ((uint32_t)-1 >> PRF_COOKIEBITS);
 	if (diff >= maxdiff)
 		return -EINVAL;
 
-	return ((cookie - synproxy_hash(saddr, daddr, sport, dport, count - diff, 1)) & COOKIEMASK);
+	return ((cookie - prf_synproxy_hash(saddr, daddr, sport, dport, count - diff, 1)) & PRF_COOKIEMASK);
 }
 
 inline int
-synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th,
+prf_synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th,
 			uint32_t time_min, struct prf_tcpopts *options)
 {
 	uint32_t cookie = rte_be_to_cpu_32(th->recv_ack) - 1;
 	uint32_t seq = rte_be_to_cpu_32(th->sent_seq) - 1;
-	int data = synproxy_cookie(cookie, iph->src_addr, iph->dst_addr,
+	int data = prf_synproxy_cookie(cookie, iph->src_addr, iph->dst_addr,
 					th->src_port, th->dst_port, seq, time_min, 2);
 	if (data < 0)
 		return 1;
 	if (data < (1<<7)) {
-		options->mss =  msstab[data & (PRF_ARRAY_SIZE(msstab) - 1)];
+		options->mss =  prf_msstab[data & (PRF_ARRAY_SIZE(prf_msstab) - 1)];
 		options->wscale = (data>>2) & 0xf;
 		options->sackok = data>>6 & 0x1;
 		return 0;
@@ -123,27 +123,27 @@ synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th,
 
 
 
-struct src_track_hash *
-src_track_hash_init(unsigned lcore_id, int idx)
+struct prf_src_track_hash *
+prf_src_track_hash_init(unsigned lcore_id, int idx)
 {
-	struct src_track_hash *hash = NULL;
+	struct prf_src_track_hash *hash = NULL;
 	char buf[PRF_TCP_HASH_NAMESIZE];
 
-	snprintf(buf, sizeof(buf), "src_track_hash_%u_%u", lcore_id, idx);
-	hash = (struct src_track_hash *)rte_zmalloc_socket(buf, sizeof(struct src_track_hash), CACHE_LINE_SIZE, 0);
+	snprintf(buf, sizeof(buf), "prf_src_track_hash_%u_%u", lcore_id, idx);
+	hash = (struct prf_src_track_hash *)rte_zmalloc_socket(buf, sizeof(struct prf_src_track_hash), CACHE_LINE_SIZE, 0);
 	return hash;
 }
 
 int
-prf_src_track_node_add(struct src_track_hash *hash_table,
+prf_src_track_node_add(struct prf_src_track_hash *hash_table,
 		uint32_t key, struct prf_src_track_node **node)
 {
 	int ret, i = 0;
 	uint32_t bucket;
-	struct src_track_ent *ent, *cur;
+	struct prf_src_track_ent *ent, *cur;
 
-	bucket = rte_jhash_1word(key, prf_hash_initval) & SRC_TRACK_HASH_MASK;
-	for (i = 0; i < SRC_TRACK_PRF_KEYS_PER_BUCKET; i++) {
+	bucket = rte_jhash_1word(key, prf_hash_initval) & PRF_SRC_TRACK_HASH_MASK;
+	for (i = 0; i < PRF_SRC_TRACK_PRF_KEYS_PER_BUCKET; i++) {
 		if (hash_table->key_bucket[bucket].key[i] == 0) {
 			hash_table->key_bucket[bucket].key[i] = key;
 			*node = &hash_table->node_bucket[bucket].node[i];
@@ -174,18 +174,18 @@ prf_src_track_node_add(struct src_track_hash *hash_table,
 }
 
 int
-prf_src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
+prf_src_track_node_del(struct prf_src_track_hash *hash_table, uint32_t key)
 {
 	int i;
 	uint32_t bucket;
-	struct src_track_ent *tmp, *cur, **head;
+	struct prf_src_track_ent *tmp, *cur, **head;
 
 	if (key == 0)
 		return -EINVAL;
 
-	bucket = rte_jhash_1word(key, prf_hash_initval) & SRC_TRACK_HASH_MASK;
+	bucket = rte_jhash_1word(key, prf_hash_initval) & PRF_SRC_TRACK_HASH_MASK;
 
-	for (i = 0; i < SRC_TRACK_PRF_KEYS_PER_BUCKET; i++) {
+	for (i = 0; i < PRF_SRC_TRACK_PRF_KEYS_PER_BUCKET; i++) {
 		if (hash_table->key_bucket[bucket].key[i] == key) {
 			hash_table->key_bucket[bucket].key[i] = 0;
 			memset(&hash_table->node_bucket[bucket].node[i], 0, sizeof(struct prf_src_track_node));
@@ -220,15 +220,15 @@ prf_src_track_node_del(struct src_track_hash *hash_table, uint32_t key)
 }
 
 int
-prf_src_track_node_lookup(struct src_track_hash *hash_table,
+prf_src_track_node_lookup(struct prf_src_track_hash *hash_table,
 			uint32_t key, struct prf_src_track_node **node)
 {
 	int i;
 	uint32_t bucket;
-	struct src_track_ent *cur;
+	struct prf_src_track_ent *cur;
 
-	bucket = rte_jhash_1word(key, prf_hash_initval) & SRC_TRACK_HASH_MASK;
-	for (i = 0; i < SRC_TRACK_PRF_KEYS_PER_BUCKET; i++) {
+	bucket = rte_jhash_1word(key, prf_hash_initval) & PRF_SRC_TRACK_HASH_MASK;
+	for (i = 0; i < PRF_SRC_TRACK_PRF_KEYS_PER_BUCKET; i++) {
 		if (hash_table->key_bucket[bucket].key[i] == key) {
 			*node = &hash_table->node_bucket[bucket].node[i];
 			return 0;
@@ -247,8 +247,8 @@ prf_src_track_node_lookup(struct src_track_hash *hash_table,
 }
 
 int
-src_track_rate_check(struct prf_src_track_node *node,
-			struct sec_ctx_rule *rule, uint64_t time)
+prf_src_track_rate_check(struct prf_src_track_node *node,
+			struct prf_sec_ctx_rule *rule, uint64_t time)
 {
 	uint64_t time_diff, n_periods;
 
@@ -268,7 +268,7 @@ src_track_rate_check(struct prf_src_track_node *node,
 }
 
 int
-src_track_checkout(struct sec_ctx_rule *rule, uint32_t key,
+prf_src_track_checkout(struct prf_sec_ctx_rule *rule, uint32_t key,
 			uint64_t time, struct prf_src_track_node **node)
 {
 	int ret;
@@ -276,13 +276,13 @@ src_track_checkout(struct sec_ctx_rule *rule, uint32_t key,
 	if (unlikely((rule == NULL) || (key == 0) || (time == 0)))
 		return -EINVAL;
 
-	if (likely((rule->flags & WHITE_LIST_CHECK) == WHITE_LIST_CHECK)) {
-		ret = ipset_lookup(rule->white_list, key, time);
+	if (likely((rule->flags & PRF_WHITE_LIST_CHECK) == PRF_WHITE_LIST_CHECK)) {
+		ret = prf_ipset_lookup(rule->white_list, key, time);
 		if (unlikely(ret == 0))
 			return 0;
 	}
-	if (likely((rule->flags & BLACK_LIST_CHECK) == BLACK_LIST_CHECK)) {
-		ret = ipset_lookup(rule->black_list, key, time);
+	if (likely((rule->flags & PRF_BLACK_LIST_CHECK) == PRF_BLACK_LIST_CHECK)) {
+		ret = prf_ipset_lookup(rule->black_list, key, time);
 		if (unlikely(ret == 0))
 			return 3;
 	}
@@ -300,20 +300,20 @@ src_track_checkout(struct sec_ctx_rule *rule, uint32_t key,
 		(*node)->time		= time;
 		(*node)->bucket		= rule->bucket_size;
 	}
-	if ((rule->flags & SRC_TRACK_CONN_FLAG) == SRC_TRACK_CONN_FLAG) {
+	if ((rule->flags & PRF_SRC_TRACK_CONN_FLAG) == PRF_SRC_TRACK_CONN_FLAG) {
 		if ((*node)->counter >= rule->max_states) {
-			if ((rule->flags & SRC_TRACK_BAN) == SRC_TRACK_BAN) {
-				ret = ipset_add(rule->black_list, key, time);
+			if ((rule->flags & PRF_SRC_TRACK_BAN) == PRF_SRC_TRACK_BAN) {
+				ret = prf_ipset_add(rule->black_list, key, time);
 /* TODO: ipset overflow statistics or LOG if ret = -ENOENT */
 			}
 			return 1;
 		}
 	}
-	if ((rule->flags & SRC_TRACK_RATE_FLAG) == SRC_TRACK_RATE_FLAG) {
-		ret = src_track_rate_check(*node, rule, time);
+	if ((rule->flags & PRF_SRC_TRACK_RATE_FLAG) == PRF_SRC_TRACK_RATE_FLAG) {
+		ret = prf_src_track_rate_check(*node, rule, time);
 		if (ret) {
-			if ((rule->flags & SRC_TRACK_BAN) == SRC_TRACK_BAN) {
-				ret = ipset_add(rule->black_list, key, time);
+			if ((rule->flags & PRF_SRC_TRACK_BAN) == PRF_SRC_TRACK_BAN) {
+				ret = prf_ipset_add(rule->black_list, key, time);
 			}
 			return 2;
 		}
@@ -322,38 +322,38 @@ src_track_checkout(struct sec_ctx_rule *rule, uint32_t key,
 	return 0;
 }
 
-struct ipset_hash *
-ipset_hash_init(unsigned lcore_id, int idx)
+struct prf_ipset_hash *
+prf_ipset_hash_init(unsigned lcore_id, int idx)
 {
-	struct ipset_hash *hash = NULL;
+	struct prf_ipset_hash *hash = NULL;
 	char buf[PRF_TCP_HASH_NAMESIZE];
 
-	snprintf(buf, sizeof(buf), "ipset_hash_%u_%u", lcore_id, idx);
-	hash = (struct ipset_hash *)rte_zmalloc_socket(buf, sizeof(struct ipset_hash), CACHE_LINE_SIZE, 0);
+	snprintf(buf, sizeof(buf), "prf_ipset_hash_%u_%u", lcore_id, idx);
+	hash = (struct prf_ipset_hash *)rte_zmalloc_socket(buf, sizeof(struct prf_ipset_hash), CACHE_LINE_SIZE, 0);
 	return hash;
 }
 
 
 int
-ipset_lookup(struct ipset_hash *hash, uint32_t key, uint64_t time)
+prf_ipset_lookup(struct prf_ipset_hash *hash, uint32_t key, uint64_t time)
 {
 	int i;
 	uint32_t bucket;
 
-	bucket = rte_jhash_1word(key, prf_hash_initval) & IPSET_HASH_MASK;
+	bucket = rte_jhash_1word(key, prf_hash_initval) & PRF_IPSET_HASH_MASK;
 
 	rte_prefetch0((void *)&hash->bucket[bucket].key[0]);
 	rte_prefetch0((void *)&hash->bucket[bucket].timer[0]);
 	rte_prefetch0((void *)((char *)&hash->bucket[bucket].timer[0] + CACHE_LINE_SIZE));
 
-	for (i = 0; i < NB_IPSET_KEYS; i++) {
+	for (i = 0; i < PRF_NB_IPSET_KEYS; i++) {
 		if (unlikely(hash->bucket[bucket].key[i] == key)) {
 			if (unlikely((time - hash->bucket[bucket].timer[i]) > hash->ban_timer)) {
 				hash->bucket[bucket].key[i]	= 0;
 				hash->bucket[bucket].timer[i]	= 0;
 				return -ENOENT;
 			}
-			if (hash->flags && IPSET_UPDATE_TIMER)
+			if (hash->flags && PRF_IPSET_UPDATE_TIMER)
 				hash->bucket[bucket].timer[i] = time;
 			return 0;
 		}
@@ -362,7 +362,7 @@ ipset_lookup(struct ipset_hash *hash, uint32_t key, uint64_t time)
 }
 
 int
-ipset_add(struct ipset_hash *hash, uint32_t key, uint64_t time)
+prf_ipset_add(struct prf_ipset_hash *hash, uint32_t key, uint64_t time)
 {
 	int i;
 	uint32_t bucket;
@@ -373,13 +373,13 @@ ipset_add(struct ipset_hash *hash, uint32_t key, uint64_t time)
 	rte_prefetch0((void *)&hash->bucket[bucket].timer[0]);
 	rte_prefetch0((void *)((char *)&hash->bucket[bucket].timer[0] + CACHE_LINE_SIZE));
 
-	for (i = 0; i < NB_IPSET_KEYS; i++) {
+	for (i = 0; i < PRF_NB_IPSET_KEYS; i++) {
 		if (unlikely(hash->bucket[bucket].key[i] == key)) {
 			hash->bucket[bucket].timer[i]	= time;
 			return 0;
 		}
 	}
-	for (i = 0; i < NB_IPSET_KEYS; i++) {
+	for (i = 0; i < PRF_NB_IPSET_KEYS; i++) {
 		if (unlikely(time - hash->bucket[bucket].timer[i] > hash->ban_timer)) {
 			hash->bucket[bucket].key[i]	= key;
 			hash->bucket[bucket].timer[i]	= time;

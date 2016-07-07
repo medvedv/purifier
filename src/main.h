@@ -89,7 +89,7 @@ struct prf_lcore_conf {
 	uint8_t			core_role;
 	unsigned		len[PRF_MAX_PORTS];
 	struct prf_mbuf_table	tx_mbufs[PRF_MAX_PORTS] __rte_cache_aligned;
-	struct sec_ctx_rule	rules[PRF_SEC_CTX_MAX_RULES] __rte_cache_aligned;
+	struct prf_sec_ctx_rule	rules[PRF_SEC_CTX_MAX_RULES] __rte_cache_aligned;
 	struct prf_lcore_stats	stats __rte_cache_aligned;
 } __rte_cache_aligned;
 

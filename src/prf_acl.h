@@ -38,7 +38,7 @@
 
 struct prf_lcore_conf;
 
-#define PRF_PRF_ACL_NAME			32
+#define PRF_ACL_NAME			32
 
 #define PRF_ACL_MAX_ACTIONS_BITS		3
 #define PRF_ACL_MAX_ACTIONS			(1 << PRF_ACL_MAX_ACTIONS_BITS)

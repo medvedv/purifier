@@ -43,8 +43,8 @@
 
 #include "prf_stateful.h"
 #include "prf_acl.h"
-#include "sec_ctx.h"
-#include "sec_ctx_api.h"
+#include "prf_sec_ctx.h"
+#include "prf_sec_ctx_api.h"
 #include "main.h"
 #include "prf_csum.h"
 
@@ -117,7 +117,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 		if (((tcpflags & (PRF_TCPHDR_RST|PRF_TCPHDR_ACK)) ==
 				(PRF_TCPHDR_RST|PRF_TCPHDR_ACK)) && (ack == 0))
 			ack = prf_tcp_conn->dir[!dir].td_end;
-		if ((prf_tcp_conn->flags & TCP_STATE_SYNPROXY) &&
+		if ((prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) &&
 				(dir == PRF_DIR_ORIG)) {
 			tcp_hdr->recv_ack =
 				rte_cpu_to_be_32(rte_be_to_cpu_32(tcp_hdr->recv_ack) -
@@ -139,7 +139,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 				rte_pktmbuf_free(m);
 				return;
 		}
-		if ((prf_tcp_conn->flags & TCP_STATE_SYNPROXY) &&
+		if ((prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) &&
 				(dir == PRF_DIR_REV)) {
 			if ((rte_be_to_cpu_32(tcp_hdr->sent_seq) == 0) &&
 				(prf_tcp_conn->state == PRF_TCP_STATE_SYN_SENT))
@@ -197,10 +197,10 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 		prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
 		prf_tcp_conn->dir[dir].packets++;
 		prf_tcp_conn->dir[dir].bytes += m->pkt.pkt_len;
-		if (prf_tcp_conn->flags & TCP_STATE_SYNPROXY) {
+		if (prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) {
 			prf_tcp_conn->seq_diff -=
 				rte_be_to_cpu_32(tcp_hdr->sent_seq);
-			prf_tcp_conn->flags &= ~TCP_STATE_SYNPROXY_INIT;
+			prf_tcp_conn->flags &= ~PRF_TCP_STATE_SYNPROXY_INIT;
 			prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
 			if (PRF_SEQ_GT(ack + (win << prf_tcp_conn->dir[dir].td_wscale),
 					prf_tcp_conn->dir[!dir].td_maxend))
@@ -241,8 +241,8 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
 	}
 
-	if ((prf_tcp_conn->flags & TCP_STATE_SYNPROXY) && (dir == 0)) {
-		if (unlikely(prf_tcp_conn->flags & TCP_STATE_SYNPROXY_INIT)) {
+	if ((prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) && (dir == 0)) {
+		if (unlikely(prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY_INIT)) {
 			m->metadata64[0] = 0;
 			oldmbuf = prf_tcp_conn->m;
 			i = 0;
@@ -250,7 +250,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 				oldmbuf = (struct rte_mbuf *)oldmbuf->metadata64[0];
 				++i;
 			}
-			if (i >= MAX_SYNPROXY_MBUF_CHAIN) {
+			if (i >= PRF_MAX_SYNPROXY_MBUF_CHAIN) {
 				rte_pktmbuf_free(m);
 				return;
 			}
@@ -290,7 +290,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			--conf->stats.embrionic_counter;
 		prf_tcp_conn->state = newstate;
 
-		if ((prf_tcp_conn->flags & TCP_STATE_SYNPROXY) && (dir == 1)) {
+		if ((prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) && (dir == 1)) {
 			tcp_hdr->sent_seq =
 				rte_cpu_to_be_32(rte_be_to_cpu_32(tcp_hdr->sent_seq) +
 							prf_tcp_conn->seq_diff);
@@ -617,7 +617,7 @@ prf_get_opts(uint8_t *ptr, int length, struct prf_tcpopts *options)
 			case PRF_TCPOPT_MSS:
 				if (opsize == PRF_TCPOLEN_MSS) {
 					options->mss = *ptr << 8 | *(ptr + 1);
-					if (options->mss < DEFAULT_MSS)
+					if (options->mss < PRF_DEFAULT_MSS)
 						return 1;
 				}
 				break;
