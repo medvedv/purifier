@@ -73,7 +73,7 @@
 #include "acl.h"
 #include "sec_ctx.h"
 #include "main.h"
-#include "csum.h"
+#include "prf_csum.h"
 #include "cmdline.h"
 
 #define MAX_LCORES 8
@@ -202,9 +202,9 @@ get_16b_sum(uint16_t *ptr16, uint32_t nr)
 }
 
 inline
-uint16_t get_ipv4_psd_sum(struct ipv4_hdr *ip_hdr)
+uint16_t prf_get_ipv4_psd_sum(struct ipv4_hdr *ip_hdr)
 {
-	struct psd_header psd_hdr;
+	struct prf_psd_header psd_hdr;
 
 	psd_hdr.src_addr = ip_hdr->src_addr;
 	psd_hdr.dst_addr = ip_hdr->dst_addr;
@@ -213,7 +213,7 @@ uint16_t get_ipv4_psd_sum(struct ipv4_hdr *ip_hdr)
 	psd_hdr.len	= rte_cpu_to_be_16((uint16_t)
 			(rte_be_to_cpu_16(ip_hdr->total_length)
 				- sizeof(struct ipv4_hdr)));
-	return get_16b_sum((uint16_t *)&psd_hdr, sizeof(struct psd_header));
+	return get_16b_sum((uint16_t *)&psd_hdr, sizeof(struct prf_psd_header));
 }
 
 static void

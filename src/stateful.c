@@ -46,7 +46,7 @@
 #include "sec_ctx.h"
 #include "sec_ctx_api.h"
 #include "main.h"
-#include "csum.h"
+#include "prf_csum.h"
 
 uint32_t hash_initval = 0;
 uint64_t tcp_timer_table[TCP_STATE_NB_STATES] __rte_cache_aligned;
@@ -124,7 +124,7 @@ process_tcp_seg(struct lcore_conf *conf, struct rte_mbuf *m,
 				tcp_conn->seq_diff);
 			ack -= tcp_conn->seq_diff;
 			ip_hdr->hdr_checksum  = 0;
-			tcp_hdr->cksum          = get_ipv4_psd_sum(ip_hdr);
+			tcp_hdr->cksum          = prf_get_ipv4_psd_sum(ip_hdr);
 			m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 		}
 
@@ -149,7 +149,7 @@ process_tcp_seg(struct lcore_conf *conf, struct rte_mbuf *m,
 					rte_cpu_to_be_32(rte_be_to_cpu_32(tcp_hdr->sent_seq) +
 					tcp_conn->seq_diff);
 			ip_hdr->hdr_checksum  = 0;
-			tcp_hdr->cksum          = get_ipv4_psd_sum(ip_hdr);
+			tcp_hdr->cksum          = prf_get_ipv4_psd_sum(ip_hdr);
 			m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 		}
 		if (tcp_conn->state < TCP_STATE_ESTABL)
@@ -262,7 +262,7 @@ process_tcp_seg(struct lcore_conf *conf, struct rte_mbuf *m,
 			tcp_conn->seq_diff);
 		ack -= tcp_conn->seq_diff;
 		ip_hdr->hdr_checksum  = 0;
-		tcp_hdr->cksum          = get_ipv4_psd_sum(ip_hdr);
+		tcp_hdr->cksum          = prf_get_ipv4_psd_sum(ip_hdr);
 		m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 	}
 
@@ -295,7 +295,7 @@ process_tcp_seg(struct lcore_conf *conf, struct rte_mbuf *m,
 				rte_cpu_to_be_32(rte_be_to_cpu_32(tcp_hdr->sent_seq) +
 							tcp_conn->seq_diff);
 			ip_hdr->hdr_checksum  = 0;
-			tcp_hdr->cksum          = get_ipv4_psd_sum(ip_hdr);
+			tcp_hdr->cksum          = prf_get_ipv4_psd_sum(ip_hdr);
 			m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 		}
 		send_packet(m, conf, dst_ports[m->pkt.in_port]);

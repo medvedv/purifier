@@ -41,7 +41,7 @@
 #include "sec_ctx.h"
 #include "sec_ctx_api.h"
 #include "main.h"
-#include "csum.h"
+#include "prf_csum.h"
 
 static const struct rte_acl_field_def ipv4_defs[NUM_FIELDS_IPV4] = {
 	{
@@ -177,7 +177,7 @@ acl_accept(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_
 		tcp_hdr->data_off		= (sizeof(struct tcp_hdr) + optlen) << 2;
 		tcp_hdr->tcp_flags		= TCPHDR_SYN;
 		tcp_hdr->rx_win			= oldtcp_hdr->rx_win;
-		tcp_hdr->cksum			= get_ipv4_psd_sum(ip_hdr);
+		tcp_hdr->cksum			= prf_get_ipv4_psd_sum(ip_hdr);
 		tcp_hdr->tcp_urp		= 0;
 
 		*tcp_opt        = TCPOPT_MSS;
@@ -220,7 +220,7 @@ acl_accept(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_
 		ip_hdr->hdr_checksum	= 0;
 		tcp_hdr->recv_ack	= rte_cpu_to_be_32(rte_be_to_cpu_32(tcp_hdr->sent_seq) + 1);
 		tcp_hdr->tcp_urp	= 0;
-		tcp_hdr->cksum		= get_ipv4_psd_sum(ip_hdr);
+		tcp_hdr->cksum		= prf_get_ipv4_psd_sum(ip_hdr);
 		tcp_hdr->rx_win		= rte_cpu_to_be_16(8192);
 		tcp_hdr->tcp_flags	= TCPHDR_SYN|TCPHDR_ACK;
 		tcp_hdr->data_off	= (sizeof(struct tcp_hdr) + optlen) << 2;
@@ -393,7 +393,7 @@ acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64
 		tcp_hdr->data_off		= (sizeof(struct tcp_hdr) + optlen) << 2;
 		tcp_hdr->tcp_flags		= TCPHDR_SYN;
 		tcp_hdr->rx_win			= oldtcp_hdr->rx_win;
-		tcp_hdr->cksum			= get_ipv4_psd_sum(ip_hdr);
+		tcp_hdr->cksum			= prf_get_ipv4_psd_sum(ip_hdr);
 		tcp_hdr->tcp_urp		= 0;
 
 		if (tcpopts.mss) {
@@ -459,7 +459,7 @@ acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64
 		ip_hdr->hdr_checksum	= 0;
 		tcp_hdr->recv_ack	= rte_cpu_to_be_32(rte_be_to_cpu_32(tcp_hdr->sent_seq) + 1);
 		tcp_hdr->tcp_urp	= 0;
-		tcp_hdr->cksum		= get_ipv4_psd_sum(ip_hdr);
+		tcp_hdr->cksum		= prf_get_ipv4_psd_sum(ip_hdr);
 		tcp_hdr->rx_win		= rte_cpu_to_be_16(8192);
 		tcp_hdr->tcp_flags	= TCPHDR_SYN|TCPHDR_ACK;
 		tcp_hdr->data_off	= (sizeof(struct tcp_hdr) + optlen) << 2;

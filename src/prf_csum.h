@@ -31,10 +31,10 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CSUM_H_
-#define _CSUM_H_
+#ifndef _PRF_CSUM_H_
+#define _PRF_CSUM_H_
 
-struct psd_header {
+struct prf_psd_header {
 	uint32_t src_addr;	/* IP address of source host. */
 	uint32_t dst_addr;	/* IP address of destination host(s). */
 	uint8_t  zero;		/* zero. */
@@ -43,6 +43,6 @@ struct psd_header {
 } __attribute__((__packed__));
 
 
-inline uint16_t get_ipv4_psd_sum(struct ipv4_hdr *ip_hdr);
+inline uint16_t prf_get_ipv4_psd_sum(struct ipv4_hdr *ip_hdr);
 
-#endif /* _CSUM_H_ */
+#endif /* _PRF_CSUM_H_ */
