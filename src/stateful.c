@@ -52,7 +52,7 @@ uint32_t hash_initval = 0;
 uint64_t tcp_timer_table[TCP_STATE_NB_STATES] __rte_cache_aligned;
 
 void
-process_tcp_seg(struct lcore_conf *conf, struct rte_mbuf *m,
+process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 	struct tcp_conn *tcp_conn, uint64_t *timer, uint64_t time, int dir)
 {
 	uint8_t tcpflags;
@@ -321,7 +321,7 @@ ipv4_tcp_hash_init(unsigned lcore_id)
 }
 
 int
-ipv4_tcp_conn_add(struct lcore_conf *conf, uint32_t sip, uint32_t dip,
+ipv4_tcp_conn_add(struct prf_lcore_conf *conf, uint32_t sip, uint32_t dip,
 		uint16_t sport, uint16_t dport, uint64_t **timer,
 		struct tcp_conn **tcp_conn)
 {
@@ -378,7 +378,7 @@ ipv4_tcp_conn_add(struct lcore_conf *conf, uint32_t sip, uint32_t dip,
 }
 
 void
-ipv4_tcp_conn_del_key(struct lcore_conf *conf, uint64_t bucket, int i)
+ipv4_tcp_conn_del_key(struct prf_lcore_conf *conf, uint64_t bucket, int i)
 {
 	struct ipv4_tcp_hash *hash_table = conf->tcp_hash;
 	struct src_track_node *node =
@@ -413,7 +413,7 @@ ipv4_tcp_conn_del_key(struct lcore_conf *conf, uint64_t bucket, int i)
 }
 
 int
-ipv4_tcp_conn_lookup_burst(struct lcore_conf *conf, struct rte_mbuf **mb_arr,
+ipv4_tcp_conn_lookup_burst(struct prf_lcore_conf *conf, struct rte_mbuf **mb_arr,
 		struct rte_mbuf **mb_new, int nb_pkt, uint64_t time)
 {
 	int i, j, k = 0, l = 0;
@@ -518,7 +518,7 @@ nxt_pkt:
 }
 
 int
-ipv4_tcp_conn_lookup(struct lcore_conf *conf, struct conn_tuple *key,
+ipv4_tcp_conn_lookup(struct prf_lcore_conf *conf, struct conn_tuple *key,
 			uint64_t **timer, struct tcp_conn **tcp_conn)
 {
 	int i;
@@ -642,7 +642,7 @@ get_opts(uint8_t *ptr, int length, struct tcpopts *options)
 }
 
 void
-ipv4_tcp_garbage_collect(struct lcore_conf *conf, uint64_t time)
+ipv4_tcp_garbage_collect(struct prf_lcore_conf *conf, uint64_t time)
 {
 	uint32_t bucket;
 	int  i, j;

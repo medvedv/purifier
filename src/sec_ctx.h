@@ -67,7 +67,7 @@
 #define DEFAULT_MSS			536
 #define MAX_TCP_WINDOW			32767
 
-struct lcore_conf;
+struct prf_lcore_conf;
 
 extern uint32_t embrionic_threshold;
 extern uint32_t syn_proxy_secret[2];

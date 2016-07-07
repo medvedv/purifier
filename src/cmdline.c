@@ -112,7 +112,7 @@ cmdline_parse_token_string_t cmd_acl =
 #define COLLECT_STAT(counter, field)	do {			\
 	counter = 0;						\
 	RTE_LCORE_FOREACH_SLAVE(i) {				\
-		counter += lcore_conf[i].stats.field;		\
+		counter += prf_lcore_conf[i].stats.field;		\
 	}							\
 } while (0)
 
@@ -230,7 +230,7 @@ init_acl:
 	RTE_LCORE_FOREACH_SLAVE(i) {
 		if (i == prf_primarycore_id)
 			continue;
-		gc_arr[i] = lcore_conf[i].bucket_pair_nb;
+		gc_arr[i] = prf_lcore_conf[i].bucket_pair_nb;
 	}
 	i = 1;
 	rte_mb();
@@ -238,7 +238,7 @@ init_acl:
 		i = 0;
 		if ((i == prf_mastercore_id) || (i == prf_primarycore_id))
 			continue;
-		if (gc_arr[i] == lcore_conf[i].bucket_pair_nb)
+		if (gc_arr[i] == prf_lcore_conf[i].bucket_pair_nb)
 			i += 1;
 	}
 	rte_acl_free(tmp_ctx);
@@ -258,13 +258,13 @@ dump_states(struct cmdline *cl)
 			continue;
 		for (j = 0; j < TCP_CONN_HASH_SIZE; j++) {
 			for (k = 0; k < KEYS_PER_BUCKET; k++) {
-				if (lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k].src_addr == 0)
+				if (prf_lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k].src_addr == 0)
 					continue;
-				memcpy((uint8_t *)&tuple, (uint8_t *)&lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k], sizeof(struct conn_tuple));
-				memcpy((uint8_t *)&tcp_conn, (uint8_t *)&lcore_conf[i].tcp_hash->tcp_conn_bucket[j].tcp_conn[k], sizeof(struct tcp_conn));
-				timer = lcore_conf[i].tcp_hash->timer_bucket[j].idle_timer[k];
+				memcpy((uint8_t *)&tuple, (uint8_t *)&prf_lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k], sizeof(struct conn_tuple));
+				memcpy((uint8_t *)&tcp_conn, (uint8_t *)&prf_lcore_conf[i].tcp_hash->tcp_conn_bucket[j].tcp_conn[k], sizeof(struct tcp_conn));
+				timer = prf_lcore_conf[i].tcp_hash->timer_bucket[j].idle_timer[k];
 				rte_wmb();
-				if ((lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k].src_addr == 0) || (timer <= lcore_conf[i].timer))
+				if ((prf_lcore_conf[i].tcp_hash->tcp_key_bucket[j].key[k].src_addr == 0) || (timer <= prf_lcore_conf[i].timer))
 					continue;
 				switch (tcp_conn.state) {
 				case TCP_IV:
@@ -295,7 +295,7 @@ dump_states(struct cmdline *cl)
 					snprintf(tcp_state, sizeof(tcp_state), "ERROR");
 					break;
 				}
-				ttl_time = (timer - lcore_conf[i].timer) / prf_tsc_hz;
+				ttl_time = (timer - prf_lcore_conf[i].timer) / prf_tsc_hz;
 				cmdline_printf(cl,	"%d pkts %d bytes"
 							"[%s]"
 							" Src ip " NIPQUAD_FMT
@@ -450,7 +450,7 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 					continue;
 				break;
 			}
-			rule = &lcore_conf[i].rules[ent->num];
+			rule = &prf_lcore_conf[i].rules[ent->num];
 
 			cmdline_printf(cl,	"\t\n Sec context %s :\t\n"
 						"\t Syn proxy mss %d\t\n", ent->name, rule->syn_proxy_mss);
@@ -655,47 +655,47 @@ static void cmd_create_sec_ctx_parsed(__attribute__((unused)) void *parsed_resul
 		RTE_LCORE_FOREACH_SLAVE(j) {
 			if (j == prf_primarycore_id)
 				continue;
-			if (rte_atomic64_read(&lcore_conf[j].rules[i].ref_cnt) != 0)
+			if (rte_atomic64_read(&prf_lcore_conf[j].rules[i].ref_cnt) != 0)
 				goto next_rule;
 		}
 		/*Free context found, init*/
 		new_ent->num = i;
 /* TODO: fix possible memory leak */
 		RTE_LCORE_FOREACH_SLAVE(j) {
-			lcore_conf[j].rules[i].flags = 0;
-			lcore_conf[j].rules[i].syn_proxy_mss = DEFAULT_MSS;
-			lcore_conf[j].rules[i].syn_proxy_wscale = 0xf;
+			prf_lcore_conf[j].rules[i].flags = 0;
+			prf_lcore_conf[j].rules[i].syn_proxy_mss = DEFAULT_MSS;
+			prf_lcore_conf[j].rules[i].syn_proxy_wscale = 0xf;
 			if (j == prf_primarycore_id)
 				continue;
 			/*check src track hash*/
-			if (lcore_conf[j].rules[i].hash_table == NULL) {
-				if ((lcore_conf[j].rules[i].hash_table = src_track_hash_init(j, i)) == NULL) {
+			if (prf_lcore_conf[j].rules[i].hash_table == NULL) {
+				if ((prf_lcore_conf[j].rules[i].hash_table = src_track_hash_init(j, i)) == NULL) {
 					cmdline_printf(cl, "\t Not enough memory\t\n");
 					rte_free(new_ent);
 					return;
 				}
 			} else {
-				memset(lcore_conf[j].rules[i].hash_table, 0, sizeof(struct src_track_hash));
+				memset(prf_lcore_conf[j].rules[i].hash_table, 0, sizeof(struct src_track_hash));
 			}
 			/*check white list*/
-			if (lcore_conf[j].rules[i].white_list == NULL) {
-				if ((lcore_conf[j].rules[i].white_list = ipset_hash_init(j, i)) == NULL) {
+			if (prf_lcore_conf[j].rules[i].white_list == NULL) {
+				if ((prf_lcore_conf[j].rules[i].white_list = ipset_hash_init(j, i)) == NULL) {
 					cmdline_printf(cl, "\t Not enough memory\t\n");
 					rte_free(new_ent);
 					return;
 				}
 			} else {
-				memset(lcore_conf[j].rules[i].white_list, 0, sizeof(struct ipset_hash));
+				memset(prf_lcore_conf[j].rules[i].white_list, 0, sizeof(struct ipset_hash));
 			}
 			/*check black list*/
-			if (lcore_conf[j].rules[i].black_list == NULL) {
-				if ((lcore_conf[j].rules[i].black_list = ipset_hash_init(j, i)) == NULL) {
+			if (prf_lcore_conf[j].rules[i].black_list == NULL) {
+				if ((prf_lcore_conf[j].rules[i].black_list = ipset_hash_init(j, i)) == NULL) {
 					cmdline_printf(cl, "\t Not enough memory\t\n");
 					rte_free(new_ent);
 					return;
 				}
 			} else {
-				memset(lcore_conf[j].rules[i].black_list, 0, sizeof(struct ipset_hash));
+				memset(prf_lcore_conf[j].rules[i].black_list, 0, sizeof(struct ipset_hash));
 			}
 		}
 		SLIST_INSERT_HEAD(&global_sec_ctx_list, new_ent, next);
@@ -744,7 +744,7 @@ static void cmd_show_del_sec_ctx_parsed(void *parsed_result,
 			continue;
 		break;
 	}
-	rule = &lcore_conf[i].rules[ent->num];
+	rule = &prf_lcore_conf[i].rules[ent->num];
 
 	if (strcmp(res->head.action, "show") == 0) {
 		cmdline_printf(cl,      "\t\n Sec context %s :\t\n"
@@ -986,7 +986,7 @@ static void cmd_set_sec_ctx_params_1_parsed(void *parsed_result,
 
 	if (strcmp(res->arg, "pkts_in_bucket") == 0) {
 		RTE_LCORE_FOREACH_SLAVE(i) {
-			rule = &lcore_conf[i].rules[res->ent->num];
+			rule = &prf_lcore_conf[i].rules[res->ent->num];
 			rule->bucket_size = res->value;
 		}
 		cmdline_printf(cl, "\t Sec context %s bucket size %d\t\n", res->ent->name, res->value);
@@ -994,7 +994,7 @@ static void cmd_set_sec_ctx_params_1_parsed(void *parsed_result,
 	} else if (strcmp(res->arg, "per_second") == 0) {
 		period = prf_tsc_hz / res->value;
 		RTE_LCORE_FOREACH_SLAVE(i) {
-			rule = &lcore_conf[i].rules[res->ent->num];
+			rule = &prf_lcore_conf[i].rules[res->ent->num];
 			rule->period = period;
 		}
 		cmdline_printf(cl, "\t Sec context %s rate %d new connections per second\t\n", res->ent->name, res->value);
@@ -1002,7 +1002,7 @@ static void cmd_set_sec_ctx_params_1_parsed(void *parsed_result,
 	} else if (strcmp(res->arg, "per_minute") == 0) {
 		period = (prf_tsc_hz * 60) / res->value;
 		RTE_LCORE_FOREACH_SLAVE(i) {
-			rule = &lcore_conf[i].rules[res->ent->num];
+			rule = &prf_lcore_conf[i].rules[res->ent->num];
 			rule->period = period;
 		}
 		cmdline_printf(cl, "\t Sec context %s rate %d new connections per minute\t\n", res->ent->name, res->value);
@@ -1010,7 +1010,7 @@ static void cmd_set_sec_ctx_params_1_parsed(void *parsed_result,
 	} else if (strcmp(res->arg, "per_hour") == 0) {
 		period = (prf_tsc_hz * 3600) / res->value;
 		RTE_LCORE_FOREACH_SLAVE(i) {
-			rule = &lcore_conf[i].rules[res->ent->num];
+			rule = &prf_lcore_conf[i].rules[res->ent->num];
 			rule->period = period;
 		}
 		cmdline_printf(cl, "\t Sec context %s rate %d new connections per hour\t\n", res->ent->name, res->value);
@@ -1055,7 +1055,7 @@ static void cmd_set_sec_ctx_params_2_parsed(void *parsed_result,
 
 	if (strcmp(res->param, "max_connections") == 0) {
 		RTE_LCORE_FOREACH_SLAVE(i) {
-			rule = &lcore_conf[i].rules[res->ent->num];
+			rule = &prf_lcore_conf[i].rules[res->ent->num];
 			rule->max_states = res->value;
 		}
 		cmdline_printf(cl, "\t Sec context %s %d maximum connections per source ip\t\n", res->ent->name, res->value);
@@ -1067,7 +1067,7 @@ static void cmd_set_sec_ctx_params_2_parsed(void *parsed_result,
 		}
 		mss = msstab[i];
 		RTE_LCORE_FOREACH_SLAVE(i) {
-			rule = &lcore_conf[i].rules[res->ent->num];
+			rule = &prf_lcore_conf[i].rules[res->ent->num];
 			rule->syn_proxy_mss = mss;
 		}
 		cmdline_printf(cl, "\t MSS for protected server in sec context %s set to %d\t\n", res->ent->name, mss);
@@ -1079,7 +1079,7 @@ static void cmd_set_sec_ctx_params_2_parsed(void *parsed_result,
 		}
 		if (res->value == 15) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags &= ~SYN_PROXY_WSCALE_PERM;
 				rule->syn_proxy_wscale = 0xf;
 			}
@@ -1087,7 +1087,7 @@ static void cmd_set_sec_ctx_params_2_parsed(void *parsed_result,
 			return;
 		}
 		RTE_LCORE_FOREACH_SLAVE(i) {
-			rule = &lcore_conf[i].rules[res->ent->num];
+			rule = &prf_lcore_conf[i].rules[res->ent->num];
 			rule->flags |= SYN_PROXY_WSCALE_PERM;
 			rule->syn_proxy_wscale = res->value;
 		}
@@ -1130,7 +1130,7 @@ static void cmd_set_sec_ctx_params_3_parsed(void *parsed_result,
 			RTE_LCORE_FOREACH_SLAVE(i) {
 				if (i == prf_primarycore_id)
 					continue;
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags |= WHITE_LIST_CHECK;
 				rule->white_list->ban_timer = IPSET_WHITE_LIST_DEF_TIMER * prf_tsc_hz;
 			}
@@ -1138,7 +1138,7 @@ static void cmd_set_sec_ctx_params_3_parsed(void *parsed_result,
 			return;
 		} else if (strcmp(res->arg, "off") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags &= ~WHITE_LIST_CHECK;
 			}
 			cmdline_printf(cl, "\tSec context %s white list check off\t\n", res->ent->name);
@@ -1150,7 +1150,7 @@ static void cmd_set_sec_ctx_params_3_parsed(void *parsed_result,
 			RTE_LCORE_FOREACH_SLAVE(i) {
 				if ((i == prf_mastercore_id) || (i == prf_primarycore_id))
 					continue;
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags |= BLACK_LIST_CHECK;
 				rule->black_list->ban_timer = IPSET_BLACK_LIST_DEF_TIMER * prf_tsc_hz;
 			}
@@ -1158,7 +1158,7 @@ static void cmd_set_sec_ctx_params_3_parsed(void *parsed_result,
 			return;
 		} else if (strcmp(res->arg, "off") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags &= ~BLACK_LIST_CHECK;
 			}
 			cmdline_printf(cl, "\tSec context %s black list check off\t\n", res->ent->name);
@@ -1168,14 +1168,14 @@ static void cmd_set_sec_ctx_params_3_parsed(void *parsed_result,
 	} else if (strcmp(res->param, "src_track_overflow_ban") == 0) {
 		if (strcmp(res->arg, "on") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags |= SRC_TRACK_BAN;
 			}
 			cmdline_printf(cl, "\tSec context %s src track overflow ban on\t\n", res->ent->name);
 			return;
 		} else if (strcmp(res->arg, "off") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags &= ~SRC_TRACK_BAN;
 			}
 			cmdline_printf(cl, "\tSec context %s src track overflow ban off\t\n", res->ent->name);
@@ -1185,14 +1185,14 @@ static void cmd_set_sec_ctx_params_3_parsed(void *parsed_result,
 	} else if (strcmp(res->param, "syn_proxy_sack") == 0) {
 		if (strcmp(res->arg, "on") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags |= SYN_PROXY_SACK_PERM;
 			}
 			cmdline_printf(cl, "\tSec context %s selective ACK permited for syn proxy\t\n", res->ent->name);
 			return;
 		} else if (strcmp(res->arg, "off") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags &= ~SYN_PROXY_SACK_PERM;
 			}
 			cmdline_printf(cl, "\tSec context %s selective ACK ignored for syn proxy\t\n", res->ent->name);
@@ -1202,21 +1202,21 @@ static void cmd_set_sec_ctx_params_3_parsed(void *parsed_result,
 	} else if (strcmp(res->param, "src_track_rate_check") == 0) {
 		if (strcmp(res->arg, "on") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				if (rule->period == 0) {
 					cmdline_printf(cl, "\t Current Src track rate = 0, aborted\t\n");
 					return;
 				}
 			}
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags |= SRC_TRACK_RATE_FLAG;
 			}
 			cmdline_printf(cl, "\tSec context %s rate for new tcp sessions check on\t\n", res->ent->name);
 			return;
 		} else if (strcmp(res->arg, "off") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags &= ~SRC_TRACK_RATE_FLAG;
 			}
 			cmdline_printf(cl, "\tSec context %s rate for new tcp sessions check off\t\n", res->ent->name);
@@ -1226,14 +1226,14 @@ static void cmd_set_sec_ctx_params_3_parsed(void *parsed_result,
 	} else if (strcmp(res->param, "src_track_maxconn_check") == 0) {
 		if (strcmp(res->arg, "on") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags |= SRC_TRACK_CONN_FLAG;
 			}
 			cmdline_printf(cl, "\tSec context %s max concurent TCP sessions check on\t\n", res->ent->name);
 			return;
 		} else if (strcmp(res->arg, "off") == 0) {
 			RTE_LCORE_FOREACH_SLAVE(i) {
-				rule = &lcore_conf[i].rules[res->ent->num];
+				rule = &prf_lcore_conf[i].rules[res->ent->num];
 				rule->flags &= ~SRC_TRACK_CONN_FLAG;
 			}
 			cmdline_printf(cl, "\tSec context %s max concurent TCP sessions check off\t\n", res->ent->name);
@@ -1468,7 +1468,7 @@ static void cmd_del_acl_parsed(void *parsed_result,
 			RTE_LCORE_FOREACH_SLAVE(i) {
 				if (i == prf_primarycore_id)
 					continue;
-				lcore_conf[i].stats.acl_stat[ent->cnt_idx] = 0;
+				prf_lcore_conf[i].stats.acl_stat[ent->cnt_idx] = 0;
 			}
 			free_acl_cnt_idx(ent->cnt_idx);
 			if (ent->action == SEC_CTX)

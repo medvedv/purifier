@@ -36,7 +36,7 @@
 
 #include <rte_acl.h>
 
-struct lcore_conf;
+struct prf_lcore_conf;
 
 #define ACL_NAME			32
 
@@ -71,17 +71,17 @@ extern int acl_version;
 extern struct rte_acl_param acl_param;
 extern struct rte_acl_config acl_build_param;
 
-typedef void (*acl_callback_fn_t)(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_t time);
+typedef void (*acl_callback_fn_t)(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time);
 
-void acl_drop(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_t time);
+void acl_drop(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time);
 
-void acl_accept(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_t time);
+void acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time);
 
-void acl_reject(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_t time);
+void acl_reject(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time);
 
-void acl_no_track(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_t time);
+void acl_no_track(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time);
 
-void acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_t time);
+void acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time);
 
 void init_acl_config(void);
 

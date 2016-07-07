@@ -81,7 +81,7 @@ struct prf_mbuf_table {
 	struct rte_mbuf *m_table[PRF_MAX_PKT_BURST];
 };
 
-struct lcore_conf {
+struct prf_lcore_conf {
 	struct ipv4_tcp_hash    *tcp_hash;
 	uint64_t		timer;
 	uint32_t		bucket_pair_nb;
@@ -94,7 +94,7 @@ struct lcore_conf {
 } __rte_cache_aligned;
 
 extern uint64_t prf_tsc_hz;
-extern struct lcore_conf lcore_conf[RTE_MAX_LCORE] __rte_cache_aligned;
+extern struct prf_lcore_conf prf_lcore_conf[RTE_MAX_LCORE] __rte_cache_aligned;
 extern int prf_mastercore_id;
 extern int prf_primarycore_id;
 extern int prf_nb_fwd_cores;
@@ -104,6 +104,6 @@ extern struct rte_mempool *prf_pktmbuf_pool;
 extern struct rte_mempool *prf_tcp_ent_pool;
 extern struct rte_mempool *prf_src_track_pool;
 
-void prf_send_packet(struct rte_mbuf *m, struct lcore_conf *conf, uint8_t port);
+void prf_send_packet(struct rte_mbuf *m, struct prf_lcore_conf *conf, uint8_t port);
 
 #endif /* _PRF_MAIN_H_ */

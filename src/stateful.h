@@ -75,7 +75,7 @@
 #define TCP_LA		TCP_STATE_LAST_ACK
 #define TCP_TW		TCP_STATE_TIME_WAIT
 
-struct lcore_conf;
+struct prf_lcore_conf;
 
 static const uint8_t tcp_valid_flags[(TCPHDR_FIN|TCPHDR_SYN|TCPHDR_RST|TCPHDR_ACK|TCPHDR_URG) + 1]__rte_cache_aligned;
 static const uint8_t tcp_valid_flags[(TCPHDR_FIN|TCPHDR_SYN|TCPHDR_RST|TCPHDR_ACK|TCPHDR_URG) + 1] = {
@@ -223,17 +223,17 @@ struct tcp_lookup {
 
 struct ipv4_tcp_hash *ipv4_tcp_hash_init(unsigned lcore_id);
 
-void process_tcp_seg(struct lcore_conf *conf, struct rte_mbuf *m, struct tcp_conn *tcp_conn, uint64_t *timer, uint64_t time, int dir);
+void process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m, struct tcp_conn *tcp_conn, uint64_t *timer, uint64_t time, int dir);
 
-int ipv4_tcp_conn_add(struct lcore_conf *conf, uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint64_t **timer, struct tcp_conn **tcp_conn);
+int ipv4_tcp_conn_add(struct prf_lcore_conf *conf, uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint64_t **timer, struct tcp_conn **tcp_conn);
 
-void ipv4_tcp_conn_del_key(struct lcore_conf *conf, uint64_t bucket, int index);
+void ipv4_tcp_conn_del_key(struct prf_lcore_conf *conf, uint64_t bucket, int index);
 
-int ipv4_tcp_conn_lookup(struct lcore_conf *conf, struct conn_tuple *key, uint64_t **timer, struct tcp_conn **tcp_conn);
+int ipv4_tcp_conn_lookup(struct prf_lcore_conf *conf, struct conn_tuple *key, uint64_t **timer, struct tcp_conn **tcp_conn);
 
-int ipv4_tcp_conn_lookup_burst(struct lcore_conf *conf, struct rte_mbuf **mb_arr, struct rte_mbuf **mb_new, int nb_pkt, uint64_t time);
+int ipv4_tcp_conn_lookup_burst(struct prf_lcore_conf *conf, struct rte_mbuf **mb_arr, struct rte_mbuf **mb_new, int nb_pkt, uint64_t time);
 
-void ipv4_tcp_garbage_collect(struct lcore_conf *conf, uint64_t time);
+void ipv4_tcp_garbage_collect(struct prf_lcore_conf *conf, uint64_t time);
 
 inline uint32_t tcp_seq_plus_len(uint32_t seq, uint32_t len, uint8_t flags);
 

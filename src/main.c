@@ -89,7 +89,7 @@
 #define WORKER_CORE	3
 
 uint64_t prf_tsc_hz;
-struct lcore_conf lcore_conf[RTE_MAX_LCORE] __rte_cache_aligned;
+struct prf_lcore_conf prf_lcore_conf[RTE_MAX_LCORE] __rte_cache_aligned;
 int prf_mastercore_id;
 int prf_primarycore_id;
 int prf_nb_fwd_cores;
@@ -217,7 +217,7 @@ uint16_t prf_get_ipv4_psd_sum(struct ipv4_hdr *ip_hdr)
 }
 
 static void
-send_burst(struct lcore_conf *conf, unsigned n, uint8_t port)
+send_burst(struct prf_lcore_conf *conf, unsigned n, uint8_t port)
 {
 	struct rte_mbuf **m_table;
 	unsigned ret;
@@ -235,7 +235,7 @@ send_burst(struct lcore_conf *conf, unsigned n, uint8_t port)
 }
 
 void
-prf_send_packet(struct rte_mbuf *m, struct lcore_conf *conf, uint8_t port)
+prf_send_packet(struct rte_mbuf *m, struct prf_lcore_conf *conf, uint8_t port)
 {
 	unsigned len;
 
@@ -294,7 +294,7 @@ is_valid_ipv4_pkt(struct ipv4_hdr *pkt, uint32_t link_len)
 
 static int
 tcp_sanity_check(struct rte_mbuf **pkt_in, struct rte_mbuf **pkt_out,
-		int nb_pkt, struct lcore_conf *conf)
+		int nb_pkt, struct prf_lcore_conf *conf)
 {
 	struct rte_mbuf *m;
 	struct ether_hdr *eth_hdr;
@@ -380,11 +380,11 @@ primary_main_loop(void)
 	uint64_t diff_tsc, cur_tsc, prev_tsc;
 	uint64_t prev_poll_tsc, diff_poll_tsc;
 	int j, lcore_id, port_id, nb_rx;
-	struct lcore_conf *conf;
+	struct prf_lcore_conf *conf;
 	const uint64_t drain_tsc = (prf_tsc_hz + US_PER_S - 1) / US_PER_S * BURST_TX_DRAIN_US;
 
 	lcore_id = rte_lcore_id();
-	conf = &lcore_conf[lcore_id];
+	conf = &prf_lcore_conf[lcore_id];
 	prev_poll_tsc = prev_tsc = 0;
 
 	while (1) {
@@ -430,10 +430,10 @@ worker_main_loop(void)
 	uint64_t diff_drain_tsc, diff_gc_tsc, cur_tsc, prev_drain_tsc, prev_gc_tsc;
 	uint64_t prev_poll_tsc, diff_poll_tsc;
 	int  cb, j, lcore_id, port_id, nb_rx;
-	struct lcore_conf *conf;
+	struct prf_lcore_conf *conf;
 
 	lcore_id = rte_lcore_id();
-	conf = &lcore_conf[lcore_id];
+	conf = &prf_lcore_conf[lcore_id];
 	prev_poll_tsc = prev_drain_tsc = prev_gc_tsc = 0;
 
 	while (1) {
@@ -497,10 +497,10 @@ static int
 main_loop_launcher(__attribute__((unused)) void *dummy)
 {
 	int lcore_id, ret = 0;
-	struct lcore_conf *conf;
+	struct prf_lcore_conf *conf;
 
 	lcore_id = rte_lcore_id();
-	conf = &lcore_conf[lcore_id];
+	conf = &prf_lcore_conf[lcore_id];
 	switch (conf->core_role) {
 	case PRIMARY_CORE:
 		ret = primary_main_loop();
@@ -630,20 +630,20 @@ MAIN(int argc, char **argv)
 	if ((nb_lcores > MAX_LCORES) || (nb_lcores < MIN_LCORES))
 		rte_exit(EXIT_FAILURE, "Invalid lcores count\n");
 
-	/*init in lcore_conf core roles*/
-	memset(lcore_conf, 0, sizeof(struct lcore_conf)*RTE_MAX_LCORE);
+	/*init in prf_lcore_conf core roles*/
+	memset(prf_lcore_conf, 0, sizeof(struct prf_lcore_conf)*RTE_MAX_LCORE);
 	prf_mastercore_id = rte_get_master_lcore();
-	lcore_conf[prf_mastercore_id].core_role = MASTER_CORE;
+	prf_lcore_conf[prf_mastercore_id].core_role = MASTER_CORE;
 	prf_primarycore_id = rte_get_next_lcore(prf_mastercore_id, 1, 1);
-	lcore_conf[prf_primarycore_id].core_role = PRIMARY_CORE;
-	lcore_conf[prf_primarycore_id].queue_id = 0;
+	prf_lcore_conf[prf_primarycore_id].core_role = PRIMARY_CORE;
+	prf_lcore_conf[prf_primarycore_id].queue_id = 0;
 	j = 0;
 	prf_nb_worker_cores = 0;
 	RTE_LCORE_FOREACH_SLAVE(i) {
 		if (i == prf_primarycore_id)
 			continue;
-		lcore_conf[i].core_role = WORKER_CORE;
-		lcore_conf[i].queue_id = ++j;
+		prf_lcore_conf[i].core_role = WORKER_CORE;
+		prf_lcore_conf[i].queue_id = ++j;
 		prf_nb_worker_cores++;
 	}
 
@@ -678,8 +678,8 @@ MAIN(int argc, char **argv)
 	RTE_LCORE_FOREACH_SLAVE(i) {
 		if (i == prf_primarycore_id)
 			continue;
-		lcore_conf[i].tcp_hash = ipv4_tcp_hash_init(i);
-		if (lcore_conf[i].tcp_hash == NULL)
+		prf_lcore_conf[i].tcp_hash = ipv4_tcp_hash_init(i);
+		if (prf_lcore_conf[i].tcp_hash == NULL)
 			rte_exit(EXIT_FAILURE, "TCP_hash_create on core %d failed\n", i);
 		printf("Init TCP_Hash on core %d\n", i);
 	}

@@ -94,14 +94,14 @@ struct rte_acl_param acl_param;
 struct rte_acl_config acl_build_param;
 
 void
-acl_drop(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, __attribute__((unused)) uint64_t time)
+acl_drop(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, __attribute__((unused)) uint64_t time)
 {
 	++conf->stats.acl_stat[(result >> ACL_RESULT_RULE_SHIFT) & ACL_RESULT_RULE_MASK];
 	rte_pktmbuf_free(m);
 }
 
 void
-acl_accept(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_t time)
+acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time)
 {
 	struct rte_mbuf *oldmbuf = NULL;
 	struct ether_hdr *eth_hdr, *oldeth_hdr;
@@ -285,7 +285,7 @@ add_state:
 }
 
 void
-acl_reject(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, __attribute__((unused)) uint64_t time)
+acl_reject(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, __attribute__((unused)) uint64_t time)
 {
 	/* for future implementation*/
 	++conf->stats.acl_stat[(result >> ACL_RESULT_RULE_SHIFT) & ACL_RESULT_RULE_MASK];
@@ -293,14 +293,14 @@ acl_reject(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, __attri
 }
 
 void
-acl_no_track(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, __attribute__((unused)) uint64_t time)
+acl_no_track(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, __attribute__((unused)) uint64_t time)
 {
 	++conf->stats.acl_stat[(result >> ACL_RESULT_RULE_SHIFT) & ACL_RESULT_RULE_MASK];
 	prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
 }
 
 void
-acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct lcore_conf *conf, uint64_t time)
+acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, uint64_t time)
 {
 	struct rte_mbuf *oldmbuf = NULL;
 	struct ether_hdr *eth_hdr, *oldeth_hdr;
