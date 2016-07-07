@@ -57,7 +57,7 @@
 
 #include "acl.h"
 #include "sec_ctx.h"
-#include "stateful.h"
+#include "prf_stateful.h"
 #include "main.h"
 
 struct cmdline_head {

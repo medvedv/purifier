@@ -69,7 +69,7 @@
 #include <cmdline_socket.h>
 #include <cmdline.h>
 
-#include "stateful.h"
+#include "prf_stateful.h"
 #include "acl.h"
 #include "sec_ctx.h"
 #include "main.h"

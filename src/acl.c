@@ -36,7 +36,7 @@
 #include <rte_ip.h>
 #include <rte_tcp.h>
 
-#include "stateful.h"
+#include "prf_stateful.h"
 #include "acl.h"
 #include "sec_ctx.h"
 #include "sec_ctx_api.h"
