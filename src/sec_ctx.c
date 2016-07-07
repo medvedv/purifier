@@ -40,7 +40,7 @@
 #include <rte_tcp.h>
 
 #include "prf_stateful.h"
-#include "acl.h"
+#include "prf_acl.h"
 #include "sec_ctx.h"
 #include "sec_ctx_api.h"
 #include "main.h"

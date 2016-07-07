@@ -47,7 +47,7 @@ APP = purifier
 SRCS-y := main.c
 SRCS-y += prf_stateful.c
 SRCS-y += sec_ctx.c
-SRCS-y += acl.c
+SRCS-y += prf_acl.c
 SRCS-y += cmdline.c
 
 CFLAGS += -O3

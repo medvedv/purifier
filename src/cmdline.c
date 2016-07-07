@@ -55,7 +55,7 @@
 #include <cmdline_parse_ipaddr.h>
 #include <cmdline.h>
 
-#include "acl.h"
+#include "prf_acl.h"
 #include "sec_ctx.h"
 #include "prf_stateful.h"
 #include "main.h"
@@ -147,11 +147,11 @@ SLIST_HEAD(sec_ctx_list, sec_ctx_entry);
 /* define struct acl_list */
 LIST_HEAD(acl_list, acl_entry);
 
-int default_policy = ACCEPT;
+int default_policy = PRF_ACCEPT;
 
 struct sec_ctx_list global_sec_ctx_list;
 struct acl_list global_acl_list;
-uint8_t acl_cnt_bitmap[(1 << (ACL_MAX_RULES_BITS - ACL_CNT_BITMAP_BITS_IN_WORD))] = {0};
+uint8_t acl_cnt_bitmap[(1 << (PRF_ACL_MAX_RULES_BITS - ACL_CNT_BITMAP_BITS_IN_WORD))] = {0};
 
 static inline void
 free_acl_cnt_idx(int idx)
@@ -192,7 +192,7 @@ cmdline_build_acl(void)
 		i++;
 	}
 	if (i == 0) {
-		build_empty_acl(&new_ctx);
+		prf_build_empty_acl(&new_ctx);
 		goto init_acl;
 	}
 
@@ -201,9 +201,9 @@ cmdline_build_acl(void)
 	LIST_FOREACH(ent, &global_acl_list, next) {
 		rules[i].data.category_mask			= 1;
 		rules[i].data.priority				= RTE_ACL_MAX_PRIORITY - ent->idx;
-		sec_ctx_idx = (ent->action == SEC_CTX) ? ent->sec_ctx->num : 0;
-		rules[i].data.userdata = ent->action | (sec_ctx_idx << ACL_SEC_CTX_RESULT_SHIFT)|
-							(ent->cnt_idx << ACL_RESULT_RULE_SHIFT);
+		sec_ctx_idx = (ent->action == PRF_SEC_CTX) ? ent->sec_ctx->num : 0;
+		rules[i].data.userdata = ent->action | (sec_ctx_idx << PRF_ACL_SEC_CTX_RESULT_SHIFT)|
+							(ent->cnt_idx << PRF_ACL_RESULT_RULE_SHIFT);
 		rules[i].field[PROTO_FIELD_IPV4].value.u8	= IPPROTO_TCP;
 		rules[i].field[PROTO_FIELD_IPV4].mask_range.u8	= 0xff;
 		rules[i].field[SRC_FIELD_IPV4].value.u32	= rte_be_to_cpu_32(ent->src_ip);
@@ -216,7 +216,7 @@ cmdline_build_acl(void)
 		rules[i].field[DSTP_FIELD_IPV4].mask_range.u16	= ent->dport_hi;
 		i++;
 	}
-	ret = acl_create((struct rte_acl_rule *)rules, i, &new_ctx);
+	ret = prf_acl_create((struct rte_acl_rule *)rules, i, &new_ctx);
 	if (ret != 0)
 		rte_exit(EXIT_FAILURE, "Failed to create ACL context\n");
 	rte_free(rules);
@@ -555,11 +555,11 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 			cmdline_printf(cl, " dst "NIPQUAD_FMT"/%d", NIPQUAD(acl->dst_ip), acl->dprefixlen);
 			cmdline_printf(cl, " sport_range %d %d", acl->sport_low, acl->sport_hi);
 			cmdline_printf(cl, " dport_range %d %d", acl->dport_low, acl->dport_hi);
-			if (acl->action == DROP) {
+			if (acl->action == PRF_DROP) {
 				cmdline_printf(cl, " drop\t\n");
-			} else if (acl->action == ACCEPT) {
+			} else if (acl->action == PRF_ACCEPT) {
 				 cmdline_printf(cl, " accept\t\n");
-			} else if (acl->action == SEC_CTX) {
+			} else if (acl->action == PRF_SEC_CTX) {
 				cmdline_printf(cl, " sec_ctx %s\t\n", acl->sec_ctx->name);
 			}
 		}
@@ -568,10 +568,10 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 	} else if (strcmp(res->target, "policy") == 0) {
 		COLLECT_STAT(counter, acl_stat[0]);
 		switch (default_policy) {
-		case DROP:
+		case PRF_DROP:
 			cmdline_printf(cl, "\t %"PRIu64"\t DROP policy\t\n", counter);
 			break;
-		case ACCEPT:
+		case PRF_ACCEPT:
 			cmdline_printf(cl, "\t %"PRIu64"\t ACCEPT policy\t\n", counter);
 			break;
 		default:
@@ -827,13 +827,13 @@ static void cmd_set_acl_policy_parsed(void *parsed_result,
 	struct cmd_set_acl_policy *res = parsed_result;
 
 	if (strcmp(res->policy, "accept") == 0) {
-		default_policy = ACCEPT;
-		acl_callbacks[0] = acl_accept;
+		default_policy = PRF_ACCEPT;
+		prf_acl_callbacks[0] = prf_acl_accept;
 		cmdline_printf(cl, "\tDefault ACL policy ACCEPT\t\n");
 		return;
 	} else if (strcmp(res->policy, "drop") == 0) {
-		default_policy = DROP;
-		acl_callbacks[0] = acl_drop;
+		default_policy = PRF_DROP;
+		prf_acl_callbacks[0] = prf_acl_drop;
 		cmdline_printf(cl, "\tDefault ACL policy DROP\t\n");
 		return;
 	}
@@ -1336,11 +1336,11 @@ init_new_ent:
 	new_ent->sprefixlen	= res->sprefix.prefixlen;
 	new_ent->dprefixlen	= res->dprefix.prefixlen;
 	if (strcmp(res->action, "drop") == 0) {
-		new_ent->action		= DROP;
+		new_ent->action		= PRF_DROP;
 	} else if (strcmp(res->action, "accept") == 0) {
-		new_ent->action		= ACCEPT;
+		new_ent->action		= PRF_ACCEPT;
 	} else if (strcmp(res->action, "sec_ctx") == 0) {
-		new_ent->action		= SEC_CTX;
+		new_ent->action		= PRF_SEC_CTX;
 		new_ent->sec_ctx	= res->ent;
 		new_ent->sec_ctx->acl_ref_counter++;
 	}
@@ -1471,7 +1471,7 @@ static void cmd_del_acl_parsed(void *parsed_result,
 				prf_lcore_conf[i].stats.acl_stat[ent->cnt_idx] = 0;
 			}
 			free_acl_cnt_idx(ent->cnt_idx);
-			if (ent->action == SEC_CTX)
+			if (ent->action == PRF_SEC_CTX)
 				ent->sec_ctx->acl_ref_counter--;
 			rte_free(ent);
 			cmdline_build_acl();

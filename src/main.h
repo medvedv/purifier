@@ -72,7 +72,7 @@ struct prf_lcore_stats {
 	uint32_t no_mem_pool;
 	uint32_t states_counter;
 	uint32_t embrionic_counter;
-	uint64_t acl_stat[ACL_MAX_RULES];
+	uint64_t acl_stat[PRF_ACL_MAX_RULES];
 } __rte_cache_aligned;
 
 extern int8_t prf_dst_ports[PRF_MAX_PORTS];

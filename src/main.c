@@ -70,7 +70,7 @@
 #include <cmdline.h>
 
 #include "prf_stateful.h"
-#include "acl.h"
+#include "prf_acl.h"
 #include "sec_ctx.h"
 #include "main.h"
 #include "prf_csum.h"
@@ -479,12 +479,12 @@ worker_main_loop(void)
 			}
 			rte_acl_classify(acl_ctx, acl_p, result, nb_rx, 1);
 			for (j = 0; j < nb_rx; j++) {
-				cb = result[j] & ACL_ACTION_MASK;
-				if (unlikely(cb >= MAX_ACTIONS)) {
+				cb = result[j] & PRF_ACL_ACTION_MASK;
+				if (unlikely(cb >= PRF_MAX_ACTIONS)) {
 					rte_pktmbuf_free(pkts_burst[j]);
 					continue;
 				}
-				(*acl_callbacks[cb])(pkts_burst[j], result[j], conf, cur_tsc);
+				(*prf_acl_callbacks[cb])(pkts_burst[j], result[j], conf, cur_tsc);
 			}
 		}
 		prev_poll_tsc = cur_tsc;
@@ -705,9 +705,9 @@ MAIN(int argc, char **argv)
 	prf_tcp_timer_table[PRF_TCP_STATE_LAST_ACK]	= prf_tsc_hz * 120;
 	prf_tcp_timer_table[PRF_TCP_STATE_TIME_WAIT]	= prf_tsc_hz * 120;
 
-	init_acl_config();
+	prf_init_acl_config();
 	/*init fake acl context*/
-	build_empty_acl(&acl_ctx);
+	prf_build_empty_acl(&acl_ctx);
 	log_file = fopen("log_file.log", "a+");
 	rte_openlog_stream(log_file);
 
