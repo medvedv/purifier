@@ -4,13 +4,13 @@ Purifier is a fast transparent stateful firewall powered by DPDK. It was created
 
 Installation
 ------------
-- [Install DPDK](http://dpdk.org/doc/quick-start) [(Currently supported DPDK1.7.1)](http://fast.dpdk.org/rel/dpdk-1.7.1.tar.gz)
+- [(Get DPDK1.7.1)](http://fast.dpdk.org/rel/dpdk-1.7.1.tar.gz)
 
 - If kernel version >= 3.19.0 use patch
 ```bash
 patch -p0 < ../dpdk1.7.patch
 ```
-- Prepare system
+- [Install DPDK](http://dpdk.org/doc/quick-start) 
 
 - Reserve huge pages memory
 ```bash
@@ -38,7 +38,7 @@ cd ../src
 make
 ```
 Runing app
--------
+----------
 - [Bind NIC ports to igb_uio driver] (http://dpdk.org/doc/guides/linux_gsg/build_dpdk.html#binding-and-unbinding-network-ports-to-from-the-kernel-modules)
 
 For example to bind eth1 and eth2 from the current driver and move to use igb_uio
@@ -51,12 +51,14 @@ Run the app
 ./build/purifier -c 0x7 -n 4
 ```
 Constraints
+-----------
 
 - Currently tested under ubuntu 14.04 LTS
 - Work under dpdk1.7.1
 - Tested with ixgbe NIC's
 
 TODO
+----
 
 - Work with the latest DPDK version
 - Add zero window mechanism
