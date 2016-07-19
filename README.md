@@ -4,7 +4,7 @@ Purifier is a fast transparent stateful firewall powered by DPDK. It was created
 
 Installation
 ------------
-- [(Get DPDK1.7.1)](http://fast.dpdk.org/rel/dpdk-1.7.1.tar.gz)
+- [Get DPDK1.7.1](http://fast.dpdk.org/rel/dpdk-1.7.1.tar.gz)
 
 - If kernel version >= 3.19.0 use patch
 ```bash
