@@ -182,7 +182,7 @@ static void
 cmdline_build_acl(void)
 {
 	int sec_ctx_idx, ret;
-	int i = 0;
+	int j, i = 0;
 	struct acl4_rule *rules;
 	struct acl_entry *ent;
 	struct rte_acl_ctx *new_ctx, *tmp_ctx;
@@ -223,7 +223,6 @@ cmdline_build_acl(void)
 
 init_acl:
 	tmp_ctx = acl_ctx;
-	rte_mb();
 	acl_ctx = new_ctx;
 	rte_mb();
 
@@ -232,14 +231,17 @@ init_acl:
 			continue;
 		gc_arr[i] = prf_lcore_conf[i].bucket_pair_nb;
 	}
-	i = 1;
-	rte_mb();
-	while (i != 0) {
-		i = 0;
-		if ((i == prf_mastercore_id) || (i == prf_primarycore_id))
-			continue;
-		if (gc_arr[i] == prf_lcore_conf[i].bucket_pair_nb)
-			i += 1;
+	j = 1;
+	while (j != 0) {
+		j = 0;
+		RTE_LCORE_FOREACH_SLAVE(i) {
+			if (i == prf_primarycore_id)
+				continue;
+			if (gc_arr[i] == prf_lcore_conf[i].bucket_pair_nb) {
+				j = 1;
+				break;
+			}
+		}
 	}
 	rte_acl_free(tmp_ctx);
 }
