@@ -59,7 +59,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 	uint16_t win;
 	int i, tcp_event, newstate, ret;
 	uint32_t seq, ack, end, tcplen;
-	struct rte_mbuf *oldmbuf = NULL;
+	struct rte_mbuf *tmpmbuf, *oldmbuf = NULL;
 	struct ipv4_hdr *ip_hdr;
 	struct tcp_hdr *tcp_hdr;
 	struct prf_tcpopts prf_tcpopts;
@@ -210,8 +210,9 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			rte_pktmbuf_free(m);
 			oldmbuf = prf_tcp_conn->m;
 			while (oldmbuf != NULL) {
+				tmpmbuf = (struct rte_mbuf *)oldmbuf->metadata64[0];
 				prf_process_tcp_seg(conf, oldmbuf, prf_tcp_conn, timer, time, !dir);
-				oldmbuf = (struct rte_mbuf *)oldmbuf->metadata64[0];
+				oldmbuf = tmpmbuf;
 			}
 			return;
 		}
