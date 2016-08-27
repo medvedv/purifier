@@ -60,7 +60,6 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 	int i, tcp_event, newstate, ret;
 	uint32_t seq, ack, end, tcplen;
 	struct rte_mbuf *oldmbuf = NULL;
-	struct ether_hdr *eth_hdr;
 	struct ipv4_hdr *ip_hdr;
 	struct tcp_hdr *tcp_hdr;
 	struct prf_tcpopts prf_tcpopts;
@@ -201,7 +200,6 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			prf_tcp_conn->seq_diff -=
 				rte_be_to_cpu_32(tcp_hdr->sent_seq);
 			prf_tcp_conn->flags &= ~PRF_TCP_STATE_SYNPROXY_INIT;
-			prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
 			if (PRF_SEQ_GT(ack + (win << prf_tcp_conn->dir[dir].td_wscale),
 					prf_tcp_conn->dir[!dir].td_maxend))
 				prf_tcp_conn->dir[!dir].td_maxend =
@@ -212,8 +210,6 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			rte_pktmbuf_free(m);
 			oldmbuf = prf_tcp_conn->m;
 			while (oldmbuf != NULL) {
-				eth_hdr = rte_pktmbuf_mtod(oldmbuf, struct ether_hdr *);
-				ip_hdr = (struct ipv4_hdr *)(eth_hdr + 1);
 				prf_process_tcp_seg(conf, oldmbuf, prf_tcp_conn, timer, time, !dir);
 				oldmbuf = (struct rte_mbuf *)oldmbuf->metadata64[0];
 			}
