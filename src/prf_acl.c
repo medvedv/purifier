@@ -149,8 +149,9 @@ prf_acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf,
 		m = rte_pktmbuf_alloc(prf_pktmbuf_pool);
 		if (m == NULL) {
 			rte_pktmbuf_free(oldmbuf);
-		return;
+			return;
 		}
+		m->pkt.in_port		= oldmbuf->pkt.in_port;
 		eth_hdr			= (struct ether_hdr *)rte_pktmbuf_append(m, sizeof(struct ether_hdr));
 		ip_hdr			= (struct ipv4_hdr *)rte_pktmbuf_append(m, sizeof(struct ipv4_hdr));
 		tcp_hdr			= (struct tcp_hdr *)rte_pktmbuf_append(m, sizeof(struct tcp_hdr));
@@ -367,6 +368,7 @@ prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf
 			rte_pktmbuf_free(oldmbuf);
 			return;
 		}
+		m->pkt.in_port		= oldmbuf->pkt.in_port;
 		eth_hdr			= (struct ether_hdr *)rte_pktmbuf_append(m, sizeof(struct ether_hdr));
 		ip_hdr			= (struct ipv4_hdr *)rte_pktmbuf_append(m, sizeof(struct ipv4_hdr));
 		tcp_hdr			= (struct tcp_hdr *)rte_pktmbuf_append(m, sizeof(struct tcp_hdr));
