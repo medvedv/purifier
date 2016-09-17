@@ -43,6 +43,6 @@ struct prf_psd_header {
 } __attribute__((__packed__));
 
 
-inline uint16_t prf_get_ipv4_psd_sum(struct ipv4_hdr *ip_hdr);
+uint16_t prf_get_ipv4_psd_sum(struct ipv4_hdr *ip_hdr);
 
 #endif /* _PRF_CSUM_H_ */

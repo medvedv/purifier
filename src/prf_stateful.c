@@ -570,7 +570,7 @@ prf_ipv4_tcp_conn_lookup(struct prf_lcore_conf *conf, struct prf_conn_tuple *key
 	return -ENOENT;
 }
 
-inline uint32_t
+uint32_t
 prf_tcp_seq_plus_len(uint32_t seq, uint32_t len, uint8_t flags)
 {
 	return (seq + len + (flags & PRF_TCPHDR_SYN ? 1 : 0) +

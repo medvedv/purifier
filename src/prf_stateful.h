@@ -235,7 +235,7 @@ int prf_ipv4_tcp_conn_lookup_burst(struct prf_lcore_conf *conf, struct rte_mbuf 
 
 void prf_ipv4_tcp_garbage_collect(struct prf_lcore_conf *conf, uint64_t time);
 
-inline uint32_t prf_tcp_seq_plus_len(uint32_t seq, uint32_t len, uint8_t flags);
+uint32_t prf_tcp_seq_plus_len(uint32_t seq, uint32_t len, uint8_t flags);
 
 int prf_tcp_get_event(uint8_t flags);
 

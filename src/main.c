@@ -201,8 +201,8 @@ get_16b_sum(uint16_t *ptr16, uint32_t nr)
 	return (uint16_t)sum;
 }
 
-inline
-uint16_t prf_get_ipv4_psd_sum(struct ipv4_hdr *ip_hdr)
+uint16_t
+prf_get_ipv4_psd_sum(struct ipv4_hdr *ip_hdr)
 {
 	struct prf_psd_header psd_hdr;
 
