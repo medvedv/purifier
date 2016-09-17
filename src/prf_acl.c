@@ -188,8 +188,6 @@ prf_acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf,
 		m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 
 		seq = rte_be_to_cpu_32(tcp_hdr->sent_seq);
-		end = prf_tcp_seq_plus_len(seq, tcplen, tcpflags);
-		win = rte_be_to_cpu_16(tcp_hdr->rx_win);
 		goto add_state;
 	}
 	ret = prf_get_opts((uint8_t *)(tcp_hdr + 1), (tcp_hdr->data_off >> 2) - sizeof(struct tcp_hdr), &prf_tcpopts);
@@ -421,8 +419,6 @@ prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf
 		m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 
 		seq = rte_be_to_cpu_32(tcp_hdr->sent_seq);
-		end = prf_tcp_seq_plus_len(seq, tcplen, tcpflags);
-		win = rte_be_to_cpu_16(tcp_hdr->rx_win);
 		goto add_state;
 	}
 	ret = prf_get_opts((uint8_t *)(tcp_hdr + 1), (tcp_hdr->data_off >> 2) - sizeof(struct tcp_hdr), &prf_tcpopts);
