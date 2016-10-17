@@ -248,7 +248,7 @@ prf_send_packet(struct rte_mbuf *m, struct prf_lcore_conf *conf, uint8_t port)
 		send_burst(conf, PRF_MAX_PKT_BURST, port);
 		len = 0;
 	}
-	len = conf->len[port] = len;
+	conf->len[port] = len;
 }
 
 static inline int
