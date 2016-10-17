@@ -97,15 +97,6 @@ cmdline_parse_token_string_t cmd_acl =
 	TOKEN_STRING_INITIALIZER(struct cmdline_head,
 				target, "acl");
 
-#ifndef NIPQUAD
-#define NIPQUAD_FMT "%u.%u.%u.%u"
-#define NIPQUAD(addr)				\
-	(unsigned)((unsigned char *)&addr)[0],	\
-	(unsigned)((unsigned char *)&addr)[1],	\
-	(unsigned)((unsigned char *)&addr)[2],	\
-	(unsigned)((unsigned char *)&addr)[3]
-#endif
-
 #define TCP_STATE_NAME_MAX	32
 #define SEC_CTX_NAME_LEN_MAX	64
 

@@ -50,6 +50,16 @@ int MAIN(int argc, char **argv);
 #define PRF_SEC_CTX_MAX_RULES	8
 #define PRF_SOCKET0			0
 
+#ifndef NIPQUAD
+#define NIPQUAD_FMT "%u.%u.%u.%u"
+#define NIPQUAD(addr)				\
+	(unsigned)((unsigned char *)&addr)[0],	\
+	(unsigned)((unsigned char *)&addr)[1],	\
+	(unsigned)((unsigned char *)&addr)[2],	\
+	(unsigned)((unsigned char *)&addr)[3]
+#endif
+
+
 struct prf_lcore_stats {
 	uint64_t rx_pkts;
 	uint64_t tx_pkts;
