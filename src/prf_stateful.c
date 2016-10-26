@@ -139,6 +139,8 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 				rte_cpu_to_be_32(rte_be_to_cpu_32(tcp_hdr->recv_ack) -
 				prf_tcp_conn->seq_diff);
 			ack -= prf_tcp_conn->seq_diff;
+			if (!(tcpflags & PRF_TCPHDR_ACK))
+				ack = prf_tcp_conn->dir[!dir].td_end;
 			ip_hdr->hdr_checksum  = 0;
 			tcp_hdr->cksum          = prf_get_ipv4_psd_sum(ip_hdr);
 			m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
