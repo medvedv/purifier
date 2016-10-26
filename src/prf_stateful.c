@@ -106,6 +106,23 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 		return;
 	}
 
+	if (unlikely((prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY_INIT) && (dir == PRF_DIR_ORIG))) {
+		m->metadata64[0] = 0;
+		oldmbuf = prf_tcp_conn->m;
+		i = 0;
+		while (oldmbuf->metadata64[0]) {
+			oldmbuf = (struct rte_mbuf *)oldmbuf->metadata64[0];
+			++i;
+		}
+		if ((i >= PRF_MAX_SYNPROXY_MBUF_CHAIN) || (conf->stats.stored_mbuf_cnt >= PRF_STORED_MBUF_THRSH)) {
+			rte_pktmbuf_free(m);
+			return;
+		}
+		++conf->stats.stored_mbuf_cnt;
+		oldmbuf->metadata64[0] = (uint64_t)m;
+		return;
+	}
+
 	if (unlikely(tcpflags & PRF_TCPHDR_RST)) {
 		++conf->stats.rst_set;
 		if ((seq == 0) && (prf_tcp_conn->state == PRF_TCP_STATE_SYN_SENT) &&
@@ -239,23 +256,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
 	}
 
-	if ((prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) && (dir == 0)) {
-		if (unlikely(prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY_INIT)) {
-			m->metadata64[0] = 0;
-			oldmbuf = prf_tcp_conn->m;
-			i = 0;
-			while (oldmbuf->metadata64[0]) {
-				oldmbuf = (struct rte_mbuf *)oldmbuf->metadata64[0];
-				++i;
-			}
-			if ((i >= PRF_MAX_SYNPROXY_MBUF_CHAIN) || (conf->stats.stored_mbuf_cnt >= PRF_STORED_MBUF_THRSH)) {
-				rte_pktmbuf_free(m);
-				return;
-			}
-			++conf->stats.stored_mbuf_cnt;
-			oldmbuf->metadata64[0] = (uint64_t)m;
-			return;
-		}
+	if ((prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) && (dir == PRF_DIR_ORIG)) {
 		tcp_hdr->recv_ack =
 			rte_cpu_to_be_32(rte_be_to_cpu_32(tcp_hdr->recv_ack) -
 			prf_tcp_conn->seq_diff);

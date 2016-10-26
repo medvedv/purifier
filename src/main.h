@@ -50,7 +50,7 @@ int MAIN(int argc, char **argv);
 #define PRF_SEC_CTX_MAX_RULES	8
 #define PRF_SOCKET0		0
 
-#define PRF_STORED_MBUF_THRSH	1000;
+#define PRF_STORED_MBUF_THRSH	1000
 
 #ifndef NIPQUAD
 #define NIPQUAD_FMT "%u.%u.%u.%u"
