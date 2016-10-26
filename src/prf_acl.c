@@ -266,9 +266,10 @@ add_state:
 
 	if (oldmbuf != NULL) {
 		oldmbuf->metadata64[0]	= 0;
+		++conf->stats.stored_mbuf_cnt;
 		prf_tcp_conn->m		= oldmbuf;
 		prf_tcp_conn->seq_diff	= rte_be_to_cpu_32(oldtcp_hdr->recv_ack) - 1;
-		prf_tcp_conn->flags         |= PRF_TCP_STATE_SYNPROXY_INIT|PRF_TCP_STATE_SYNPROXY;
+		prf_tcp_conn->flags	|= PRF_TCP_STATE_SYNPROXY_INIT|PRF_TCP_STATE_SYNPROXY;
 	}
 
 	prf_tcp_conn->dir[0].td_maxend =
@@ -532,6 +533,7 @@ add_state:
 
 	if (oldmbuf != NULL) {
 		oldmbuf->metadata64[0]	= 0;
+		++conf->stats.stored_mbuf_cnt;
 		prf_tcp_conn->m		= oldmbuf;
 		prf_tcp_conn->seq_diff	= rte_be_to_cpu_32(oldtcp_hdr->recv_ack) - 1;
 		prf_tcp_conn->flags         |= PRF_TCP_STATE_SYNPROXY_INIT|PRF_TCP_STATE_SYNPROXY;

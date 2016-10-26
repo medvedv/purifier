@@ -42,13 +42,15 @@
 
 int MAIN(int argc, char **argv);
 
-#define PRF_ARRAY_SIZE(x)		(sizeof(x)/sizeof(x[0]))
+#define PRF_ARRAY_SIZE(x)	(sizeof(x)/sizeof(x[0]))
 #define PRF_TCP_HASH_NAMESIZE	32
-#define PRF_MAX_PKT_BURST		32
+#define PRF_MAX_PKT_BURST	32
 #define PRF_MAX_PORTS		2
 #define PRF_MEMPOOL_CACHE_SIZE	256
 #define PRF_SEC_CTX_MAX_RULES	8
-#define PRF_SOCKET0			0
+#define PRF_SOCKET0		0
+
+#define PRF_STORED_MBUF_THRSH	1000;
 
 #ifndef NIPQUAD
 #define NIPQUAD_FMT "%u.%u.%u.%u"
@@ -63,25 +65,26 @@ int MAIN(int argc, char **argv);
 struct prf_lcore_stats {
 	uint64_t rx_pkts;
 	uint64_t tx_pkts;
-	uint64_t malformed;
 	uint64_t bad_csum;
 	uint64_t frags;
-	uint64_t bad_flags;
-	uint64_t rst_set;
+	uint64_t malformed;
 	uint64_t state_match;
 	uint64_t state_mismatch;
+	uint64_t bad_flags;
+	uint64_t rst_set;
 	uint64_t cookies_sent;
 	uint64_t cookies_rcv;
-	uint32_t src_track_overflow;
+	uint32_t bad_seq_ack;
+	uint32_t states_counter;
+	uint32_t embrionic_counter;
 	uint32_t inserts;
 	uint32_t removals;
 	uint32_t tw_reuse;
-	uint32_t bad_seq_ack;
+	uint16_t stored_mbuf_cnt;
+	uint16_t chained_states;
 	uint32_t chained_lookup;
-	uint32_t chained_states;
 	uint32_t no_mem_pool;
-	uint32_t states_counter;
-	uint32_t embrionic_counter;
+	uint32_t src_track_overflow;
 	uint64_t acl_stat[PRF_ACL_MAX_RULES];
 } __rte_cache_aligned;
 
