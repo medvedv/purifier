@@ -232,6 +232,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 				prf_process_tcp_seg(conf, oldmbuf, prf_tcp_conn, timer, time, !dir);
 				oldmbuf = tmpmbuf;
 			}
+			prf_tcp_conn->m = NULL;
 			return;
 		}
 	}
