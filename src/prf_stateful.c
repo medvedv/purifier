@@ -97,21 +97,21 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 		prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
 		prf_tcp_conn->dir[dir].td_wscale = prf_tcpopts.wscale;
 		prf_tcp_conn->dir[dir].packets++;
-		prf_tcp_conn->dir[dir].bytes += m->pkt.pkt_len;
+		prf_tcp_conn->dir[dir].bytes += m->pkt_len;
 		*timer = time + prf_tcp_timer_table[PRF_TCP_STATE_SYN_SENT];
 		++conf->stats.embrionic_counter;
 		prf_tcp_conn->state = PRF_TCP_STATE_SYN_SENT;
 		memset(&prf_tcp_conn->dir[!dir], 0, sizeof(struct prf_tcp_conn_state));
-		prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
+		prf_send_packet(m, conf, prf_dst_ports[m->port]);
 		return;
 	}
 
 	if (unlikely((prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY_INIT) && (dir == PRF_DIR_ORIG))) {
-		m->metadata64[0] = 0;
+		m->userdata = 0;
 		oldmbuf = prf_tcp_conn->m;
 		i = 0;
-		while (oldmbuf->metadata64[0]) {
-			oldmbuf = (struct rte_mbuf *)oldmbuf->metadata64[0];
+		while (oldmbuf->userdata) {
+			oldmbuf = (struct rte_mbuf *)oldmbuf->userdata;
 			++i;
 		}
 		if ((i >= PRF_MAX_SYNPROXY_MBUF_CHAIN) || (conf->stats.stored_mbuf_cnt >= PRF_STORED_MBUF_THRSH)) {
@@ -119,7 +119,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			return;
 		}
 		++conf->stats.stored_mbuf_cnt;
-		oldmbuf->metadata64[0] = (uint64_t)m;
+		oldmbuf->userdata = m;
 		return;
 	}
 
@@ -174,7 +174,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			--conf->stats.embrionic_counter;
 		prf_tcp_conn->state = PRF_TCP_STATE_TIME_WAIT;
 		*timer = time + prf_tcp_timer_table[PRF_TCP_STATE_TIME_WAIT];
-		prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
+		prf_send_packet(m, conf, prf_dst_ports[m->port]);
 		return;
 	}
 
@@ -214,7 +214,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 		prf_tcp_conn->dir[dir].td_end = end;
 		prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
 		prf_tcp_conn->dir[dir].packets++;
-		prf_tcp_conn->dir[dir].bytes += m->pkt.pkt_len;
+		prf_tcp_conn->dir[dir].bytes += m->pkt_len;
 		if (prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) {
 			prf_tcp_conn->seq_diff -=
 				rte_be_to_cpu_32(tcp_hdr->sent_seq);
@@ -229,7 +229,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			rte_pktmbuf_free(m);
 			oldmbuf = prf_tcp_conn->m;
 			while (oldmbuf != NULL) {
-				tmpmbuf = (struct rte_mbuf *)oldmbuf->metadata64[0];
+				tmpmbuf = (struct rte_mbuf *)oldmbuf->userdata;
 				--conf->stats.stored_mbuf_cnt;
 				prf_process_tcp_seg(conf, oldmbuf, prf_tcp_conn, timer, time, !dir);
 				oldmbuf = tmpmbuf;
@@ -287,7 +287,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 				ack + (win << prf_tcp_conn->dir[dir].td_wscale);
 		*timer = time + prf_tcp_timer_table[newstate];
 		prf_tcp_conn->dir[dir].packets++;
-		prf_tcp_conn->dir[dir].bytes += m->pkt.pkt_len;
+		prf_tcp_conn->dir[dir].bytes += m->pkt_len;
 		if ((newstate > PRF_TCP_STATE_SYN_RCV) &&
 				(prf_tcp_conn->state < PRF_TCP_STATE_ESTABL))
 			--conf->stats.embrionic_counter;
@@ -301,7 +301,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			tcp_hdr->cksum          = prf_get_ipv4_psd_sum(ip_hdr);
 			m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 		}
-		prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
+		prf_send_packet(m, conf, prf_dst_ports[m->port]);
 		return;
 	}
 	++conf->stats.bad_seq_ack;
@@ -319,7 +319,7 @@ prf_ipv4_tcp_hash_init(unsigned lcore_id)
 
 	snprintf(buf, sizeof(buf), "tcp_hash_%u", lcore_id);
 	hash = (struct prf_ipv4_tcp_hash *)rte_zmalloc_socket(buf,
-			sizeof(struct prf_ipv4_tcp_hash), CACHE_LINE_SIZE, 0);
+			sizeof(struct prf_ipv4_tcp_hash), RTE_CACHE_LINE_SIZE, 0);
 	return hash;
 }
 
@@ -394,7 +394,7 @@ prf_ipv4_tcp_conn_del_key(struct prf_lcore_conf *conf, uint64_t bucket, int i)
 	if (unlikely(hash_table->prf_tcp_conn_bucket[bucket].prf_tcp_conn[i].m != 0)) {
 		tmp_mbuf = hash_table->prf_tcp_conn_bucket[bucket].prf_tcp_conn[i].m;
 		while (tmp_mbuf) {
-			tmp_nxt = (struct rte_mbuf *)tmp_mbuf->metadata64[0];
+			tmp_nxt = (struct rte_mbuf *)tmp_mbuf->userdata;
 			--conf->stats.stored_mbuf_cnt;
 			rte_pktmbuf_free(tmp_mbuf);
 			tmp_mbuf = tmp_nxt;
@@ -684,7 +684,7 @@ prf_ipv4_tcp_garbage_collect(struct prf_lcore_conf *conf, uint64_t time)
 				if (unlikely((*head)->prf_tcp_conn.m != NULL)) {
 					tmp_mbuf = (*head)->prf_tcp_conn.m;
 					while (tmp_mbuf != NULL) {
-						tmp_nxt = (struct rte_mbuf *)tmp_mbuf->metadata64[0];
+						tmp_nxt = (struct rte_mbuf *)tmp_mbuf->userdata;
 						--conf->stats.stored_mbuf_cnt;
 						rte_pktmbuf_free(tmp_mbuf);
 						tmp_mbuf = tmp_nxt;

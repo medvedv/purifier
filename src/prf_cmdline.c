@@ -320,7 +320,7 @@ typedef struct token_sec_ctx_list parse_token_sec_ctx_list_t;
 
 struct cmdline_token_ops token_sec_ctx_list_ops;
 
-static int parse_sec_ctx_list(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res);
+static int parse_sec_ctx_list(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res, unsigned ressize);
 static int complete_get_nb_sec_ctx_list(cmdline_parse_token_hdr_t *tk);
 static int complete_get_elt_sec_ctx_list(cmdline_parse_token_hdr_t *tk, int idx,
 						char *dstbuf, unsigned int size);
@@ -345,7 +345,7 @@ struct cmdline_token_ops token_sec_ctx_list_ops = {
 };
 
 int
-parse_sec_ctx_list(cmdline_parse_token_hdr_t *tk, const char *buf, void *res)
+parse_sec_ctx_list(cmdline_parse_token_hdr_t *tk, const char *buf, void *res, unsigned ressize)
 {
 	struct token_sec_ctx_list *tk2 = (struct token_sec_ctx_list *)tk;
 	struct token_sec_ctx_list_data *tkd = &tk2->sec_ctx_list_data;
@@ -353,6 +353,9 @@ parse_sec_ctx_list(cmdline_parse_token_hdr_t *tk, const char *buf, void *res)
 	unsigned int token_len = 0;
 
 	if (*buf == 0)
+		return -1;
+
+	if (res && ressize < sizeof(struct sec_ctx_entry *))
 		return -1;
 
 	while (!cmdline_isendoftoken(buf[token_len]))
@@ -582,11 +585,8 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 			cmdline_printf(cl,      "\tRX bytes %"PRIu64" :\t\n", stats.ibytes);
 			cmdline_printf(cl,      "\tTX bytes %"PRIu64" :\t\n", stats.obytes);
 			cmdline_printf(cl,      "\tRX missed %"PRIu64" :\t\n", stats.imissed);
-			cmdline_printf(cl,      "\tBad CRC %"PRIu64" :\t\n", stats.ibadcrc);
-			cmdline_printf(cl,      "\tBad len %"PRIu64" :\t\n", stats.ibadlen);
 			cmdline_printf(cl,      "\tRX errors %"PRIu64" :\t\n", stats.ierrors);
 			cmdline_printf(cl,      "\tTX errors %"PRIu64" :\t\n", stats.oerrors);
-			cmdline_printf(cl,      "\tRX mcast %"PRIu64" :\t\n", stats.imcasts);
 			cmdline_printf(cl,      "\tRX no mbuf %"PRIu64" :\t\n", stats.rx_nombuf);
 		}
 	}
@@ -634,7 +634,7 @@ static void cmd_create_sec_ctx_parsed(__attribute__((unused)) void *parsed_resul
 		cmdline_printf(cl, "\tSecurity context number exhaused\t\n");
 		return;
 	}
-	new_ent = rte_zmalloc(NULL, sizeof(*new_ent), CACHE_LINE_SIZE);
+	new_ent = rte_zmalloc(NULL, sizeof(*new_ent), RTE_CACHE_LINE_SIZE);
 	if (new_ent == NULL) {
 		cmdline_printf(cl, "\tmem error\t\n");
 		return;
@@ -1291,7 +1291,7 @@ static void cmd_set_acl_parsed(void *parsed_result,
 		cmdline_printf(cl, "Bad arguments\t\n");
 		return;
 	}
-	new_ent = rte_zmalloc(NULL, sizeof(*new_ent), CACHE_LINE_SIZE);
+	new_ent = rte_zmalloc(NULL, sizeof(*new_ent), RTE_CACHE_LINE_SIZE);
 	if (new_ent == NULL) {
 		cmdline_printf(cl, "\tNot enough memory\t\n");
 		return;

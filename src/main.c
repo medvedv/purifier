@@ -102,13 +102,13 @@ struct rte_mempool *prf_src_track_pool;
 struct  ether_addr dst_mac[PRF_MAX_PORTS] __rte_cache_aligned;
 struct  ether_addr src_mac[PRF_MAX_PORTS] __rte_cache_aligned;
 
+#define PRF_RETA_SIZE_MAX	8
 #define RSS_BYTE0 0x6d
 #define RSS_BYTE1 0x5a
 #define RSS_BYTE2 0x15
 #define RSS_BYTE3 0x3e
 
 int8_t prf_dst_ports[PRF_MAX_PORTS];
-struct rte_eth_rss_reta reta_conf;
 uint8_t my_rss_key[40];
 
 static uint64_t poll_tsc;
@@ -155,9 +155,11 @@ static const struct rte_eth_conf port_conf = {
 	.txmode = {
 		.mq_mode	= ETH_MQ_TX_NONE,
 	},
-	.rx_adv_conf.rss_conf   = {
-		.rss_key        = my_rss_key,
-		.rss_hf         = ETH_RSS_IPV4,
+	.rx_adv_conf = {
+		.rss_conf = {
+			.rss_key	= my_rss_key,
+			.rss_hf		= ETH_RSS_IPV4,
+		},
 	},
 };
 
@@ -239,8 +241,8 @@ prf_send_packet(struct rte_mbuf *m, struct prf_lcore_conf *conf, uint8_t port)
 {
 	unsigned len;
 
-	m->pkt.vlan_macip.f.l2_len = sizeof(struct ether_hdr);
-	m->pkt.vlan_macip.f.l3_len = sizeof(struct ipv4_hdr);
+	m->l2_len = sizeof(struct ether_hdr);
+	m->l3_len = sizeof(struct ipv4_hdr);
 	len = conf->len[port];
 	conf->tx_mbufs[port].m_table[len] = m;
 	len++;
@@ -308,7 +310,7 @@ tcp_sanity_check(struct rte_mbuf **pkt_in, struct rte_mbuf **pkt_out,
 		m = pkt_in[i];
 		eth_hdr = rte_pktmbuf_mtod(m, struct ether_hdr *);
 
-		if (unlikely(((m->ol_flags & PKT_RX_IPV4_HDR) != PKT_RX_IPV4_HDR) ||
+		if (unlikely(((m->packet_type & RTE_PTYPE_L3_IPV4) != RTE_PTYPE_L3_IPV4) ||
 			(rte_be_to_cpu_16(eth_hdr->ether_type) != ETHER_TYPE_IPv4))) {
 				++conf->stats.malformed;
 				rte_pktmbuf_free(m);
@@ -323,7 +325,7 @@ tcp_sanity_check(struct rte_mbuf **pkt_in, struct rte_mbuf **pkt_out,
 
 		ipv4_hdr = (struct ipv4_hdr *)(eth_hdr + 1);
 		/* Check to make sure the packet is valid (RFC1812) */
-		ret = is_valid_ipv4_pkt(ipv4_hdr, m->pkt.data_len - sizeof(struct ether_hdr));
+		ret = is_valid_ipv4_pkt(ipv4_hdr, m->data_len - sizeof(struct ether_hdr));
 		if (unlikely(ret < 0)) {
 			++conf->stats.malformed;
 			rte_pktmbuf_free(m);
@@ -518,7 +520,9 @@ static void
 init_nic(int prf_nb_fwd_cores) {
 	int i, j, ret, nb_ports, portid;
 	struct rte_eth_link link;
-	struct rte_5tuple_filter filter;
+	struct rte_eth_dev_info dev_info;
+	struct rte_eth_rss_reta_entry64 reta_conf[PRF_RETA_SIZE_MAX];
+	struct rte_eth_ntuple_filter filter;
 
 	nb_ports = rte_eth_dev_count();
 	if (nb_ports != PRF_MAX_PORTS)
@@ -541,14 +545,6 @@ init_nic(int prf_nb_fwd_cores) {
 			break;
 		}
 	}
-	/*init RETA table*/
-	for (i = 0, j = 1; i < 128; i++, j++) {
-		if (j == prf_nb_fwd_cores)
-			j = 1;
-		reta_conf.reta[i] = j;
-	}
-	reta_conf.mask_lo = 0xffffffffffffffff;
-	reta_conf.mask_hi = 0xffffffffffffffff;
 
 	for (portid = 0; portid < nb_ports; portid++) {
 		ret = rte_eth_dev_configure(portid, prf_nb_fwd_cores, prf_nb_fwd_cores, &port_conf);
@@ -570,30 +566,50 @@ init_nic(int prf_nb_fwd_cores) {
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "rte_eth_dev_start: err=%d\n", ret);
 
-		ret = rte_eth_dev_rss_reta_update(portid, &reta_conf);
-			if (ret < 0)
-				rte_exit(EXIT_FAILURE, "RETA Update fails on port %d\n", portid);
+		memset(&dev_info, 0, sizeof(dev_info));
+		rte_eth_dev_info_get(portid, &dev_info);
+		if (dev_info.reta_size == 0)
+			rte_panic("RSS setup error (null RETA size) on port %d\n", portid);
+		if (dev_info.reta_size > ETH_RSS_RETA_SIZE_512)
+			rte_panic("RSS setup error (RETA size too big) on port %d\n", portid);
+		/*init RETA table*/
+		for (i = 0; i < dev_info.reta_size; i += RTE_RETA_GROUP_SIZE)
+			reta_conf[i / RTE_RETA_GROUP_SIZE ].mask = UINT64_MAX;
 
-		memset(&filter, 0, sizeof(struct rte_5tuple_filter));
+		for (i = 0, j = 1; i < dev_info.reta_size; i++, j++) {
+			if (j == prf_nb_fwd_cores)
+				j = 1;
+			reta_conf[i / RTE_RETA_GROUP_SIZE].reta[i % RTE_RETA_GROUP_SIZE] = j;
+		}
+
+		ret = rte_eth_dev_rss_reta_update(portid, reta_conf, dev_info.reta_size);
+		if (ret < 0)
+			rte_exit(EXIT_FAILURE, "RETA Update fails on port %d\n", portid);
+
+
+		memset(&filter, 0, sizeof(struct rte_eth_ntuple_filter));
+		filter.flags = RTE_5TUPLE_FLAGS;
+		filter.proto_mask = UINT8_MAX;
 		filter.priority = 1;
-		filter.protocol_mask = 0;
-		filter.dst_ip_mask = 1;
-		filter.src_ip_mask = 1;
-		filter.dst_port_mask = 1;
-		filter.src_port_mask = 1;
+		filter.queue = 0;
 
-		filter.protocol = 0;
-		ret = rte_eth_dev_add_5tuple_filter(portid, 1, &filter, 0);
+		filter.proto = 0;
+		ret = rte_eth_dev_filter_ctrl(portid, RTE_ETH_FILTER_NTUPLE,
+			RTE_ETH_FILTER_ADD, &filter);
 		if (ret != 0)
-			rte_exit(EXIT_FAILURE, "rte_eth_dev_add_5tuple_filter: err=%d\n", ret);
-		filter.protocol = IPPROTO_UDP;
-		ret = rte_eth_dev_add_5tuple_filter(portid, 2, &filter, 0);
+			rte_exit(EXIT_FAILURE, "rte_eth_dev_filter_ctrl: err=%d\n", ret);
+
+		filter.proto = IPPROTO_UDP;
+		ret = rte_eth_dev_filter_ctrl(portid, RTE_ETH_FILTER_NTUPLE,
+			RTE_ETH_FILTER_ADD, &filter);
 		if (ret != 0)
-			rte_exit(EXIT_FAILURE, "rte_eth_dev_add_5tuple_filter: err=%d\n", ret);
-		filter.protocol = IPPROTO_SCTP;
-		ret = rte_eth_dev_add_5tuple_filter(portid, 3, &filter, 0);
+			rte_exit(EXIT_FAILURE, "rte_eth_dev_filter_ctrl: err=%d\n", ret);
+
+		filter.proto = IPPROTO_SCTP;
+		ret = rte_eth_dev_filter_ctrl(portid, RTE_ETH_FILTER_NTUPLE,
+			RTE_ETH_FILTER_ADD, &filter);
 		if (ret != 0)
-			rte_exit(EXIT_FAILURE, "rte_eth_dev_add_5tuple_filter: err=%d\n", ret);
+			rte_exit(EXIT_FAILURE, "rte_eth_dev_filter_ctrl: err=%d\n", ret);
 
 		rte_eth_promiscuous_enable(portid);
 		rte_eth_link_get(portid, &link);
@@ -621,9 +637,6 @@ MAIN(int argc, char **argv)
 		rte_exit(EXIT_FAILURE, "Invalid EAL arguments\n");
 	argc -= ret;
 	argv += ret;
-
-	if (rte_eal_pci_probe() < 0)
-		rte_exit(EXIT_FAILURE, "Cannot probe PCI\n");
 
 	nb_lcores = rte_lcore_count();
 

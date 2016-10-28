@@ -151,7 +151,7 @@ prf_acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf,
 			rte_pktmbuf_free(oldmbuf);
 			return;
 		}
-		m->pkt.in_port		= oldmbuf->pkt.in_port;
+		m->port			= oldmbuf->port;
 		eth_hdr			= (struct ether_hdr *)rte_pktmbuf_append(m, sizeof(struct ether_hdr));
 		ip_hdr			= (struct ipv4_hdr *)rte_pktmbuf_append(m, sizeof(struct ipv4_hdr));
 		tcp_hdr			= (struct tcp_hdr *)rte_pktmbuf_append(m, sizeof(struct tcp_hdr));
@@ -243,11 +243,11 @@ prf_acl_accept(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf,
 			*(uint16_t *)(tcp_opt + 2) = rte_cpu_to_be_16(prf_msstab[data & 0x3]);
 		}
 
-		m->pkt.data_len = m->pkt.pkt_len = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct tcp_hdr) + optlen;
+		m->data_len = m->pkt_len = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct tcp_hdr) + optlen;
 		m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 
 		++conf->stats.cookies_sent;
-		prf_send_packet(m, conf, m->pkt.in_port);
+		prf_send_packet(m, conf, m->port);
 		return;
 	}
 add_state:
@@ -265,7 +265,7 @@ add_state:
 	++conf->stats.embrionic_counter;
 
 	if (oldmbuf != NULL) {
-		oldmbuf->metadata64[0]	= 0;
+		oldmbuf->userdata	= 0;
 		++conf->stats.stored_mbuf_cnt;
 		prf_tcp_conn->m		= oldmbuf;
 		prf_tcp_conn->seq_diff	= rte_be_to_cpu_32(oldtcp_hdr->recv_ack) - 1;
@@ -277,11 +277,11 @@ add_state:
 	prf_tcp_conn->dir[0].td_maxwin = RTE_MAX(win, 1);
 	prf_tcp_conn->dir[0].td_wscale = prf_tcpopts.wscale;
 	prf_tcp_conn->dir[0].packets++;
-	prf_tcp_conn->dir[0].bytes += m->pkt.pkt_len;
+	prf_tcp_conn->dir[0].bytes += m->pkt_len;
 	*timer = time + prf_tcp_timer_table[PRF_TCP_STATE_SYN_SENT];
 	prf_tcp_conn->state = PRF_TCP_STATE_SYN_SENT;
 	prf_tcp_conn->prf_src_track_node = NULL;
-	prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
+	prf_send_packet(m, conf, prf_dst_ports[m->port]);
 }
 
 void
@@ -296,7 +296,7 @@ void
 prf_acl_no_track(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf, __attribute__((unused)) uint64_t time)
 {
 	++conf->stats.acl_stat[(result >> PRF_ACL_RESULT_RULE_SHIFT) & PRF_ACL_RESULT_RULE_MASK];
-	prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
+	prf_send_packet(m, conf, prf_dst_ports[m->port]);
 }
 
 void
@@ -367,7 +367,7 @@ prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf
 			rte_pktmbuf_free(oldmbuf);
 			return;
 		}
-		m->pkt.in_port		= oldmbuf->pkt.in_port;
+		m->port			= oldmbuf->port;
 		eth_hdr			= (struct ether_hdr *)rte_pktmbuf_append(m, sizeof(struct ether_hdr));
 		ip_hdr			= (struct ipv4_hdr *)rte_pktmbuf_append(m, sizeof(struct ipv4_hdr));
 		tcp_hdr			= (struct tcp_hdr *)rte_pktmbuf_append(m, sizeof(struct tcp_hdr));
@@ -496,11 +496,11 @@ prf_acl_sec_ctx(struct rte_mbuf *m, uint32_t result, struct prf_lcore_conf *conf
 			*(++tcp_opt)	= PRF_TCPOLEN_SACK_PERM;
 		}
 
-		m->pkt.data_len = m->pkt.pkt_len = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct tcp_hdr) + optlen;
+		m->data_len = m->pkt_len = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct tcp_hdr) + optlen;
 		m->ol_flags = PKT_TX_IP_CKSUM|PKT_TX_TCP_CKSUM;
 
 		++conf->stats.cookies_sent;
-		prf_send_packet(m, conf, m->pkt.in_port);
+		prf_send_packet(m, conf, m->port);
 		return;
 	}
 add_state:
@@ -532,7 +532,7 @@ add_state:
 	++conf->stats.embrionic_counter;
 
 	if (oldmbuf != NULL) {
-		oldmbuf->metadata64[0]	= 0;
+		oldmbuf->userdata	= 0;
 		++conf->stats.stored_mbuf_cnt;
 		prf_tcp_conn->m		= oldmbuf;
 		prf_tcp_conn->seq_diff	= rte_be_to_cpu_32(oldtcp_hdr->recv_ack) - 1;
@@ -546,11 +546,11 @@ add_state:
 	prf_tcp_conn->dir[0].td_maxwin = RTE_MAX(win, 1);
 	prf_tcp_conn->dir[0].td_wscale = prf_tcpopts.wscale;
 	prf_tcp_conn->dir[0].packets++;
-	prf_tcp_conn->dir[0].bytes += m->pkt.pkt_len;
+	prf_tcp_conn->dir[0].bytes += m->pkt_len;
 	*timer = time + prf_tcp_timer_table[PRF_TCP_STATE_SYN_SENT];
 	prf_tcp_conn->state = PRF_TCP_STATE_SYN_SENT;
 	prf_tcp_conn->prf_src_track_node = node;
-	prf_send_packet(m, conf, prf_dst_ports[m->pkt.in_port]);
+	prf_send_packet(m, conf, prf_dst_ports[m->port]);
 }
 
 void

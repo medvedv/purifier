@@ -130,7 +130,7 @@ prf_src_track_hash_init(unsigned lcore_id, int idx)
 	char buf[PRF_TCP_HASH_NAMESIZE];
 
 	snprintf(buf, sizeof(buf), "prf_src_track_hash_%u_%u", lcore_id, idx);
-	hash = (struct prf_src_track_hash *)rte_zmalloc_socket(buf, sizeof(struct prf_src_track_hash), CACHE_LINE_SIZE, 0);
+	hash = (struct prf_src_track_hash *)rte_zmalloc_socket(buf, sizeof(struct prf_src_track_hash), RTE_CACHE_LINE_SIZE, 0);
 	return hash;
 }
 
@@ -329,7 +329,7 @@ prf_ipset_hash_init(unsigned lcore_id, int idx)
 	char buf[PRF_TCP_HASH_NAMESIZE];
 
 	snprintf(buf, sizeof(buf), "prf_ipset_hash_%u_%u", lcore_id, idx);
-	hash = (struct prf_ipset_hash *)rte_zmalloc_socket(buf, sizeof(struct prf_ipset_hash), CACHE_LINE_SIZE, 0);
+	hash = (struct prf_ipset_hash *)rte_zmalloc_socket(buf, sizeof(struct prf_ipset_hash), RTE_CACHE_LINE_SIZE, 0);
 	return hash;
 }
 
@@ -344,7 +344,7 @@ prf_ipset_lookup(struct prf_ipset_hash *hash, uint32_t key, uint64_t time)
 
 	rte_prefetch0((void *)&hash->bucket[bucket].key[0]);
 	rte_prefetch0((void *)&hash->bucket[bucket].timer[0]);
-	rte_prefetch0((void *)((char *)&hash->bucket[bucket].timer[0] + CACHE_LINE_SIZE));
+	rte_prefetch0((void *)((char *)&hash->bucket[bucket].timer[0] + RTE_CACHE_LINE_SIZE));
 
 	for (i = 0; i < PRF_NB_IPSET_KEYS; i++) {
 		if (unlikely(hash->bucket[bucket].key[i] == key)) {
@@ -371,7 +371,7 @@ prf_ipset_add(struct prf_ipset_hash *hash, uint32_t key, uint64_t time)
 
 	rte_prefetch0((void *)&hash->bucket[bucket].key[0]);
 	rte_prefetch0((void *)&hash->bucket[bucket].timer[0]);
-	rte_prefetch0((void *)((char *)&hash->bucket[bucket].timer[0] + CACHE_LINE_SIZE));
+	rte_prefetch0((void *)((char *)&hash->bucket[bucket].timer[0] + RTE_CACHE_LINE_SIZE));
 
 	for (i = 0; i < PRF_NB_IPSET_KEYS; i++) {
 		if (unlikely(hash->bucket[bucket].key[i] == key)) {
