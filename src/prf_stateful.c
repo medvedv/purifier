@@ -88,13 +88,11 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			return;
 		}
 		++conf->stats.tw_reuse;
-		if (prf_tcpopts.wscale != 0xf)
-			prf_tcp_conn->dir[dir].td_flags |= PRF_TCP_FLAG_WSCALE;
 		prf_tcp_conn->dir[dir].packets = 0;
 		prf_tcp_conn->dir[dir].bytes = 0;
 		prf_tcp_conn->dir[dir].td_maxend =
 		prf_tcp_conn->dir[dir].td_end = end;
-		prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
+		prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX((win >> prf_tcpopts.wscale) + ((prf_tcpopts.wscale == 0) ? 0 : 1), 1);
 		prf_tcp_conn->dir[dir].td_wscale = prf_tcpopts.wscale;
 		prf_tcp_conn->dir[dir].packets++;
 		prf_tcp_conn->dir[dir].bytes += m->pkt_len;
@@ -200,29 +198,27 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			rte_pktmbuf_free(m);
 			return;
 		}
-		if (prf_tcpopts.wscale != 0xf)
-			prf_tcp_conn->dir[dir].td_flags |= PRF_TCP_FLAG_WSCALE;
 		prf_tcp_conn->dir[dir].td_wscale = prf_tcpopts.wscale;
-		if (!(prf_tcp_conn->dir[dir].td_flags & PRF_TCP_FLAG_WSCALE) &&
-				(prf_tcp_conn->dir[!dir].td_flags & PRF_TCP_FLAG_WSCALE)) {
-			prf_tcp_conn->dir[dir].td_flags &= ~PRF_TCP_FLAG_WSCALE;
-			prf_tcp_conn->dir[!dir].td_flags &= ~PRF_TCP_FLAG_WSCALE;
+		prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX((win >> prf_tcpopts.wscale) + ((prf_tcpopts.wscale == 0) ? 0 : 1), 1);
+		if ((prf_tcp_conn->dir[0].td_wscale == 15) || (prf_tcp_conn->dir[1].td_wscale == 15)) {
+			prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
+			prf_tcp_conn->dir[!dir].td_maxwin = (prf_tcp_conn->dir[!dir].td_maxwin << prf_tcp_conn->dir[!dir].td_wscale)
+								- ((prf_tcp_conn->dir[!dir].td_wscale == 0) ? 0 : 1);
 			prf_tcp_conn->dir[dir].td_wscale = 0;
 			prf_tcp_conn->dir[!dir].td_wscale = 0;
 		}
 		prf_tcp_conn->dir[dir].td_maxend =
 		prf_tcp_conn->dir[dir].td_end = end;
-		prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
 		prf_tcp_conn->dir[dir].packets++;
 		prf_tcp_conn->dir[dir].bytes += m->pkt_len;
 		if (prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) {
 			prf_tcp_conn->seq_diff -=
 				rte_be_to_cpu_32(tcp_hdr->sent_seq);
 			prf_tcp_conn->flags &= ~PRF_TCP_STATE_SYNPROXY_INIT;
-			if (PRF_SEQ_GT(ack + (win << prf_tcp_conn->dir[dir].td_wscale),
+			if (PRF_SEQ_GT(ack + RTE_MAX((win << prf_tcp_conn->dir[dir].td_wscale), 1),
 					prf_tcp_conn->dir[!dir].td_maxend))
 				prf_tcp_conn->dir[!dir].td_maxend =
-					ack + (win << prf_tcp_conn->dir[dir].td_wscale);
+					ack + RTE_MAX((win << prf_tcp_conn->dir[dir].td_wscale), 1);
 			*timer = time + prf_tcp_timer_table[newstate];
 			prf_tcp_conn->state = newstate;
 
@@ -251,12 +247,17 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 				rte_pktmbuf_free(m);
 				return;
 			}
-			if (prf_tcpopts.wscale != 0xf)
-				prf_tcp_conn->dir[dir].td_flags |= PRF_TCP_FLAG_WSCALE;
 			prf_tcp_conn->dir[dir].td_wscale = prf_tcpopts.wscale;
 			prf_tcp_conn->dir[dir].td_maxend =
 			prf_tcp_conn->dir[dir].td_end = end;
-			prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
+			prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX((win >> prf_tcpopts.wscale) + ((prf_tcpopts.wscale == 0) ? 0 : 1), 1);
+			if ((dir == 1) && ((prf_tcp_conn->dir[0].td_wscale == 15) || (prf_tcp_conn->dir[1].td_wscale == 15))) {
+				prf_tcp_conn->dir[dir].td_maxwin = RTE_MAX(win, 1);
+				prf_tcp_conn->dir[!dir].td_maxwin = (prf_tcp_conn->dir[!dir].td_maxwin << prf_tcp_conn->dir[!dir].td_wscale)
+									- ((prf_tcp_conn->dir[!dir].td_wscale == 0) ? 0 : 1);
+				prf_tcp_conn->dir[dir].td_wscale = 0;
+				prf_tcp_conn->dir[!dir].td_wscale = 0;
+			}
 	}
 
 	if ((prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) && (dir == PRF_DIR_ORIG)) {
@@ -281,10 +282,10 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 			prf_tcp_conn->dir[dir].td_maxwin = win;
 		if (PRF_SEQ_GT(end, prf_tcp_conn->dir[dir].td_end))
 			prf_tcp_conn->dir[dir].td_end = end;
-		if (PRF_SEQ_GT(ack + (win << prf_tcp_conn->dir[dir].td_wscale),
+		if (PRF_SEQ_GT(ack + RTE_MAX((win << prf_tcp_conn->dir[dir].td_wscale), 1),
 				prf_tcp_conn->dir[!dir].td_maxend))
 			prf_tcp_conn->dir[!dir].td_maxend =
-				ack + (win << prf_tcp_conn->dir[dir].td_wscale);
+				ack + RTE_MAX((win << prf_tcp_conn->dir[dir].td_wscale), 1);
 		*timer = time + prf_tcp_timer_table[newstate];
 		prf_tcp_conn->dir[dir].packets++;
 		prf_tcp_conn->dir[dir].bytes += m->pkt_len;

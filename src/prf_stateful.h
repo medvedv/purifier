@@ -136,9 +136,9 @@ static const uint8_t prf_tcp_trans_table[2][4][PRF_TCP_STATE_NB_STATES] = {
 
 #define PRF_TCP_MAX_WINSHIFT	14
 /*td_flags defines*/
-#define PRF_TCP_FLAG_WSCALE		0x1
+#define PRF_TCP_FLAG_WSCALE	0x1
 #define PRF_TCP_FLAG_SACK_PERM	0x2
-#define PRF_TCP_FLAG_CLOSE_INIT     0x4	/*For future use to avoid closing after FIN retransmit*/
+#define PRF_TCP_FLAG_CLOSE_INIT	0x4	/*For future use to avoid closing after FIN retransmit*/
 
 #define PRF_SEQ_LEQ(a, b)		((int)((a)-(b)) <= 0)
 #define PRF_SEQ_GEQ(a, b)		((int)((a)-(b)) >= 0)
