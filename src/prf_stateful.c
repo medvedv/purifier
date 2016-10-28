@@ -354,7 +354,7 @@ prf_ipv4_tcp_conn_add(struct prf_lcore_conf *conf, uint32_t sip, uint32_t dip,
 			return 0;
 		}
 	}
-	ret = rte_mempool_mc_get(prf_tcp_ent_pool, (void *)&ent);
+	ret = rte_mempool_get(prf_tcp_ent_pool, (void *)&ent);
 	if (ret != 0) {
 		return -ENOENT;
 	}
@@ -701,7 +701,7 @@ prf_ipv4_tcp_garbage_collect(struct prf_lcore_conf *conf, uint64_t time)
 				tmp = (*head);
 				(*head) = (*head)->next;
 				memset(tmp, 0, sizeof(struct prf_tcp_ent));
-				rte_mempool_mp_put(prf_tcp_ent_pool, tmp);
+				rte_mempool_put(prf_tcp_ent_pool, tmp);
 				continue;
 			}
 			head = &(*head)->next;

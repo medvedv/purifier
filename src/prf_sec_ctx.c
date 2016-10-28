@@ -152,7 +152,7 @@ prf_src_track_node_add(struct prf_src_track_hash *hash_table,
 		}
 	}
 
-	ret = rte_mempool_mc_get(prf_src_track_pool, (void *)&ent);
+	ret = rte_mempool_get(prf_src_track_pool, (void *)&ent);
 	if (ret != 0)
 		return -ENOENT;
 
@@ -201,7 +201,7 @@ prf_src_track_node_del(struct prf_src_track_hash *hash_table, uint32_t key)
 		tmp = *head;
 		*head = (*head)->next;
 		memset(tmp, 0, sizeof(struct prf_src_track_node));
-		rte_mempool_mp_put(prf_src_track_pool, tmp);
+		rte_mempool_put(prf_src_track_pool, tmp);
 		return 0;
 	}
 
@@ -211,7 +211,7 @@ prf_src_track_node_del(struct prf_src_track_hash *hash_table, uint32_t key)
 			tmp = cur->next;
 			cur->next = tmp->next;
 			memset(tmp, 0, sizeof(struct prf_src_track_node));
-			rte_mempool_mp_put(prf_src_track_pool, tmp);
+			rte_mempool_put(prf_src_track_pool, tmp);
 			return 0;
 		}
 		cur = cur->next;
