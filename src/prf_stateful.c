@@ -100,6 +100,18 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 		++conf->stats.embrionic_counter;
 		prf_tcp_conn->state = PRF_TCP_STATE_SYN_SENT;
 		memset(&prf_tcp_conn->dir[!dir], 0, sizeof(struct prf_tcp_conn_state));
+		prf_tcp_conn->seq_diff = 0;
+		prf_tcp_conn->flags = 0;
+		if (unlikely(prf_tcp_conn->m != NULL)) {
+			oldmbuf = prf_tcp_conn->m;
+			while (oldmbuf) {
+				tmpmbuf = (struct rte_mbuf *)oldmbuf->userdata;
+				--conf->stats.stored_mbuf_cnt;
+				rte_pktmbuf_free(oldmbuf);
+				oldmbuf = tmpmbuf;
+			}
+			prf_tcp_conn->m = NULL;
+		}
 		prf_send_packet(m, conf, prf_dst_ports[m->port]);
 		return;
 	}
