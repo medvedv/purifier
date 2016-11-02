@@ -4,12 +4,8 @@ Purifier is a fast transparent stateful firewall powered by DPDK. It was created
 
 Installation
 ------------
-- [Get DPDK1.7.1](http://fast.dpdk.org/rel/dpdk-1.7.1.tar.gz)
+- [Get DPDK 16.07](http://fast.dpdk.org/rel/dpdk-16.07.tar.xz)
 
-- If kernel version >= 3.19.0 use patch
-```bash
-patch -p0 < ../dpdk1.7.patch
-```
 - [Install DPDK](http://dpdk.org/doc/quick-start) 
 
 - Reserve huge pages memory
@@ -53,18 +49,14 @@ Run the app
 Constraints
 -----------
 
-- Currently tested under ubuntu 14.04 LTS
-- Work under dpdk1.7.1
 - Tested with ixgbe NIC's
 
 TODO
 ----
 
-- Work with the latest DPDK version
-- Add zero window mechanism
 - Add mbuf extension
 - Add ip defragmentation
 - Add telnet/ssh support
 - Rework lookup with SSE/AVX
-
+- Add new white/black lists based on bitmaps 
 
