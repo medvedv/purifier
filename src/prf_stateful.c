@@ -221,19 +221,18 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 		}
 		prf_tcp_conn->dir[dir].td_maxend =
 		prf_tcp_conn->dir[dir].td_end = end;
-		prf_tcp_conn->dir[dir].packets++;
-		prf_tcp_conn->dir[dir].bytes += m->pkt_len;
 		if (prf_tcp_conn->flags & PRF_TCP_STATE_SYNPROXY) {
 			prf_tcp_conn->seq_diff -=
 				rte_be_to_cpu_32(tcp_hdr->sent_seq);
 			prf_tcp_conn->flags &= ~PRF_TCP_STATE_SYNPROXY_INIT;
+			prf_tcp_conn->dir[dir].packets++;
+			prf_tcp_conn->dir[dir].bytes += m->pkt_len;
 			if (PRF_SEQ_GT(ack + RTE_MAX((win << prf_tcp_conn->dir[dir].td_wscale), 1),
 					prf_tcp_conn->dir[!dir].td_maxend))
 				prf_tcp_conn->dir[!dir].td_maxend =
 					ack + RTE_MAX((win << prf_tcp_conn->dir[dir].td_wscale), 1);
 			*timer = time + prf_tcp_timer_table[newstate];
 			prf_tcp_conn->state = newstate;
-
 			rte_pktmbuf_free(m);
 			oldmbuf = prf_tcp_conn->m;
 			while (oldmbuf != NULL) {
