@@ -247,7 +247,7 @@ prf_process_tcp_seg(struct prf_lcore_conf *conf, struct rte_mbuf *m,
 	}
 
 	if (unlikely((((prf_tcp_conn->state == PRF_TCP_STATE_SYN_SENT) && (dir == 0)
-		&& ((tcpflags & (PRF_TCPHDR_SYN|PRF_TCPHDR_ACK) == PRF_TCPHDR_SYN)) ||
+		&& ((tcpflags & (PRF_TCPHDR_SYN|PRF_TCPHDR_ACK)) == PRF_TCPHDR_SYN)) ||
 		((prf_tcp_conn->state == PRF_TCP_STATE_SYN_RCV) && (dir == 1)
 		&&  ((tcpflags & (PRF_TCPHDR_SYN|PRF_TCPHDR_ACK)) == (PRF_TCPHDR_SYN|PRF_TCPHDR_ACK))))
 		&& PRF_SEQ_GT(seq, prf_tcp_conn->dir[dir].td_end))) {
