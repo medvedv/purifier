@@ -47,7 +47,7 @@ int prf_synproxy_cookie(uint32_t cookie, uint32_t saddr, uint32_t daddr,
 				uint16_t sport, uint16_t dport, uint32_t sseq,
 				uint32_t count, uint32_t maxdiff);
 
-inline int prf_synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th, uint32_t time_min, struct prf_tcpopts *options);
+int prf_synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th, uint32_t time_min, struct prf_tcpopts *options);
 
 int prf_src_track_node_add(struct prf_src_track_hash *hash_table, uint32_t key, struct prf_src_track_node **node);
 

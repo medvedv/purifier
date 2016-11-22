@@ -102,7 +102,7 @@ prf_synproxy_cookie(uint32_t cookie, uint32_t saddr, uint32_t daddr,
 	return ((cookie - prf_synproxy_hash(saddr, daddr, sport, dport, count - diff, 1)) & PRF_COOKIEMASK);
 }
 
-inline int
+int
 prf_synproxy_cookie_check(struct ipv4_hdr *iph, struct tcp_hdr *th,
 			uint32_t time_min, struct prf_tcpopts *options)
 {
