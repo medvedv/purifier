@@ -91,7 +91,7 @@ ExecStop=/opt/dpdk-16.07/tools/dpdk-devbind.py -b ixgbe 0000:01:00.0 0000:01:00.
 WantedBy=multi-user.target
 ```
 
-- Actually the purifier run in tmux session `/etc/systemd/system/purifier.service`:
+- Actually the purifier in the tmux session `/etc/systemd/system/purifier.service`:
 ```
 [Unit]
 Description=Purifier firewall
@@ -106,7 +106,7 @@ Restart=always # if purifier crashes, systemd restarts it
 WantedBy=multi-user.target
 ```
 
-Making all the service being autostarted:
+Making all the services being autostarted:
 ```
 systemctl enable igb_uio_module.service
 systemctl enable dpdk-devbind.service
