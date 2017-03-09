@@ -367,7 +367,7 @@ prf_ipset_add(struct prf_ipset_hash *hash, uint32_t key, uint64_t time)
 	int i;
 	uint32_t bucket;
 
-	bucket = rte_jhash_1word(key, prf_hash_initval);
+	bucket = rte_jhash_1word(key, prf_hash_initval) & PRF_IPSET_HASH_MASK;
 
 	rte_prefetch0((void *)&hash->bucket[bucket].key[0]);
 	rte_prefetch0((void *)&hash->bucket[bucket].timer[0]);
