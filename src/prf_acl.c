@@ -258,6 +258,8 @@ add_state:
 		else
 			++conf->stats.malformed;
 		rte_pktmbuf_free(m);
+		if (oldmbuf)
+			rte_pktmbuf_free(oldmbuf);
 		return;
 	}
 	++conf->stats.states_counter;
@@ -510,6 +512,8 @@ add_state:
 	if (ret != 0) {
 		++conf->stats.src_track_overflow;
 		rte_pktmbuf_free(m);
+		if (oldmbuf)
+			rte_pktmbuf_free(oldmbuf);
 		return;
 	}
 
@@ -525,6 +529,8 @@ add_state:
 			prf_src_track_node_del(node->rule->hash_table, node->key);
 		}
 		rte_pktmbuf_free(m);
+		if (oldmbuf)
+			rte_pktmbuf_free(oldmbuf);
 		return;
 	}
 	++conf->stats.states_counter;
