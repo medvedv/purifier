@@ -36,4 +36,6 @@
 
 extern cmdline_parse_ctx_t main_ctx[];
 
+void prf_mgmt(void);
+
 #endif /* _COMMANDS_H_ */

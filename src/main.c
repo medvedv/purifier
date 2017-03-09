@@ -628,20 +628,26 @@ int
 MAIN(int argc, char **argv)
 {
 	int i, j, ret, nb_lcores, lcore_id;
-	struct cmdline *cl;
 	FILE *log_file;
 
 	/* init EAL */
 	ret = rte_eal_init(argc, argv);
-	if (ret < 0)
+	if (ret < 0) {
 		rte_exit(EXIT_FAILURE, "Invalid EAL arguments\n");
+	}
 	argc -= ret;
 	argv += ret;
 
+	log_file = fopen("/var/log/purifier.log", "a+");
+	if (log_file == NULL)
+		rte_exit(EXIT_FAILURE, "Can not open log file\n");
+	rte_openlog_stream(log_file);
+
 	nb_lcores = rte_lcore_count();
 
-	if ((nb_lcores > MAX_LCORES) || (nb_lcores < MIN_LCORES))
+	if ((nb_lcores > MAX_LCORES) || (nb_lcores < MIN_LCORES)) {
 		rte_exit(EXIT_FAILURE, "Invalid lcores count\n");
+	}
 
 	/*init in prf_lcore_conf core roles*/
 	memset(prf_lcore_conf, 0, sizeof(struct prf_lcore_conf)*RTE_MAX_LCORE);
@@ -721,16 +727,11 @@ MAIN(int argc, char **argv)
 	prf_init_acl_config();
 	/*init fake acl context*/
 	prf_build_empty_acl(&acl_ctx);
-	log_file = fopen("log_file.log", "a+");
-	rte_openlog_stream(log_file);
 
 	/* launch per-lcore init on every lcore */
 	rte_eal_mp_remote_launch(main_loop_launcher, NULL, SKIP_MASTER);
-	cl = cmdline_stdin_new(main_ctx, "ololo> ");
-	if (cl == NULL)
-		rte_panic("Cannot create cmdline instance\n");
-	cmdline_interact(cl);
-	cmdline_stdin_exit(cl);
+
+	prf_mgmt();
 
 	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
 		if (rte_eal_wait_lcore(lcore_id) < 0)

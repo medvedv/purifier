@@ -48,6 +48,9 @@
 #include <rte_ethdev.h>
 #include <rte_lcore.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+
 #include <cmdline_rdline.h>
 #include <cmdline_parse.h>
 #include <cmdline_parse_num.h>
@@ -55,10 +58,13 @@
 #include <cmdline_parse_ipaddr.h>
 #include <cmdline.h>
 
+#include "prf_cmdline.h"
 #include "prf_acl.h"
 #include "prf_sec_ctx.h"
 #include "prf_stateful.h"
 #include "main.h"
+
+#define PRF_TELNET_PORT		9999
 
 struct cmdline_head {
 	cmdline_fixed_string_t action;
@@ -1512,3 +1518,76 @@ cmdline_parse_ctx_t main_ctx[] = {
 	NULL,
 };
 
+void * prf_cmdline_thread(void *);
+
+void *
+prf_cmdline_thread(void *arg)
+{
+	struct cmdline *cl;
+	int ret;
+	uint8_t telnet_opt[] = {0xff, 0xfb, 0x03, 0xff, 0xfb, 0x01};
+	char thread_name[RTE_MAX_THREAD_NAME_LEN];
+
+	cl = (struct cmdline *)arg;
+
+	snprintf(thread_name, RTE_MAX_THREAD_NAME_LEN, "Purifier CLI");
+	rte_thread_setname(pthread_self(), thread_name);
+	ret = send(cl->s_out, telnet_opt, sizeof(telnet_opt), 0);
+		if (ret != sizeof(telnet_opt))
+			rte_exit(EXIT_FAILURE, "Can not init telnet session\n");
+
+	cmdline_interact(cl);
+	cmdline_free(cl);
+	return NULL;
+}
+
+void
+prf_mgmt(void)
+{
+	int sockfd, newsockfd, ret;
+	struct sockaddr_in serv_addr, cl_addr;
+	socklen_t socklen;
+	pthread_t tid;
+	struct cmdline *cl;
+
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if (sockfd < 0)
+		rte_exit(EXIT_FAILURE, "can not create socket, eeror %d\n", errno);
+
+	ret = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){ 1 }, sizeof(int));
+	if (ret < 0)
+		rte_exit(EXIT_FAILURE, "setsockopt failed with error %d\n", errno);
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	serv_addr.sin_port = htons(PRF_TELNET_PORT);
+
+	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+		rte_exit(EXIT_FAILURE, "ERROR on binding with error %d\n", errno);
+
+	if (listen(sockfd,5) < 0)
+		rte_exit(EXIT_FAILURE, "ERROR on listen with error %d\n", errno);
+
+	socklen = sizeof(cl_addr);
+
+	while(1) {
+		newsockfd = accept(sockfd, (struct sockaddr *) &cl_addr, &socklen);
+		if (newsockfd == -1) {
+			RTE_LOG(ERR, USER1, "accept failed with error %d\n", errno);
+			continue;
+		}
+
+		cl = cmdline_new(main_ctx, "ololo> ", newsockfd, newsockfd);
+		if (cl == NULL)
+			rte_exit(EXIT_FAILURE, "Can not allocate memory for command line\n");
+
+		ret = pthread_create(&tid, NULL, prf_cmdline_thread, cl);
+		if (ret)
+			rte_exit(EXIT_FAILURE, "Thread create failed\n");
+
+		ret = pthread_detach(tid);
+		if (ret)
+			rte_exit(EXIT_FAILURE, "Thread detach failed\n");
+
+	}
+}
