@@ -63,6 +63,8 @@
 #include <errno.h>
 #include <termios.h>
 #include <sys/queue.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 #include <cmdline_rdline.h>
 #include <cmdline_parse.h>
@@ -627,8 +629,29 @@ init_nic(int prf_nb_fwd_cores) {
 int
 MAIN(int argc, char **argv)
 {
+	int pid, sid;
 	int i, j, ret, nb_lcores, lcore_id;
 	FILE *log_file;
+
+	pid = fork();
+	if (pid == -1)
+		rte_exit(EXIT_FAILURE, "fork() failed with error %d\n", errno);
+
+	if (pid > 0)
+		return 0;
+
+	umask(0);
+	sid = setsid();
+	if (sid < 0)
+		rte_exit(EXIT_FAILURE, "setsid() failed with error %d\n", errno);
+
+	ret = chdir("/");
+	if (ret < 0)
+		rte_exit(EXIT_FAILURE, "chdir() failed with error %d\n", errno);
+
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
 
 	/* init EAL */
 	ret = rte_eal_init(argc, argv);
