@@ -1500,6 +1500,34 @@ cmdline_parse_inst_t cmd_del_acl = {
 
 /* *** END OF DEL ACL *** */
 
+/* *** QUIT *** */
+
+struct cmd_quit_result {
+	cmdline_fixed_string_t quit;
+};
+
+static void cmd_quit_parsed(__attribute__((unused)) void *parsed_result,
+				struct cmdline *cl,
+				__attribute__((unused)) void *data)
+{
+	cmdline_quit(cl);
+}
+
+cmdline_parse_token_string_t cmd_quit_token =
+	TOKEN_STRING_INITIALIZER(struct cmd_quit_result, quit, "quit");
+
+cmdline_parse_inst_t cmd_quit = {
+	.f = cmd_quit_parsed,
+	.data = NULL,
+	.help_str = "Quit",
+	.tokens = {
+		(void *)&cmd_quit_token,
+		NULL,
+	},
+};
+
+/* *** END OF QUIT *** */
+
 /* *** MAIN CONTEXT *** */
 
 cmdline_parse_ctx_t main_ctx[] = {
@@ -1515,6 +1543,7 @@ cmdline_parse_ctx_t main_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_set_acl,
 	(cmdline_parse_inst_t *)&cmd_set_acl_sec_ctx,
 	(cmdline_parse_inst_t *)&cmd_del_acl,
+	(cmdline_parse_inst_t *)&cmd_quit,
 	NULL,
 };
 
