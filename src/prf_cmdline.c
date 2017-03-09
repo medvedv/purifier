@@ -95,7 +95,7 @@ cmdline_parse_token_string_t cmd_policy =
 				target, "policy");
 cmdline_parse_token_string_t cmd_embrio =
 	TOKEN_STRING_INITIALIZER(struct cmdline_head,
-				target, "prf_embrionic_threshold");
+				target, "embrionic_threshold");
 cmdline_parse_token_string_t cmd_timer =
 	TOKEN_STRING_INITIALIZER(struct cmdline_head,
 				target, "timer");
@@ -567,8 +567,8 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 				cmdline_printf(cl, " sec_ctx %s\r\n", acl->sec_ctx->name);
 			}
 		}
-	} else if (strcmp(res->target, "prf_embrionic_threshold") == 0) {
-		cmdline_printf(cl, "prf_embrionic_threshold %d\r\n", prf_embrionic_threshold);
+	} else if (strcmp(res->target, "embrionic_threshold") == 0) {
+		cmdline_printf(cl, "embrionic_threshold %d\r\n", prf_embrionic_threshold);
 	} else if (strcmp(res->target, "policy") == 0) {
 		COLLECT_STAT(counter, acl_stat[0]);
 		switch (default_policy) {
@@ -600,7 +600,7 @@ static void cmd_show_all_parsed(__attribute__((unused)) void *parsed_result,
 
 cmdline_parse_token_string_t cmd_all_target =
 	TOKEN_STRING_INITIALIZER(struct cmdline_head, target,
-		"sec_ctx#statistics#timers#connections#acl#prf_embrionic_threshold#policy#interface_stats");
+		"sec_ctx#statistics#timers#connections#acl#embrionic_threshold#policy#interface_stats");
 
 cmdline_parse_inst_t cmd_show_all = {
 	.f = cmd_show_all_parsed,
@@ -871,7 +871,7 @@ static void cmd_set_embrio_parsed(void *parsed_result,
 	struct cmd_set_embrio_num *res = parsed_result;
 
 	prf_embrionic_threshold = res->num;
-	cmdline_printf(cl, "\tprf_embrionic_threshold changed to %u\r\n", prf_embrionic_threshold);
+	cmdline_printf(cl, "\tembrionic_threshold changed to %u\r\n", prf_embrionic_threshold);
 }
 
 cmdline_parse_token_num_t cmd_embrio_num =
